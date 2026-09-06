@@ -90,7 +90,7 @@ export function WishlistPageContent() {
                 return (
                   <article className="wishlistCard" key={item.id}>
                     <div className="wishlistImage">
-                      {image ? <img src={image.url} alt={image.altText ?? item.product.name} /> : <span className="commerceImageFallback">CN</span>}
+                      {image ? <img src={image.url} alt={image.altText ?? item.product.name} loading="lazy" decoding="async" fetchPriority="low" /> : <span className="commerceImageFallback">CN</span>}
                     </div>
                     <div className="wishlistBody">
                       <div>

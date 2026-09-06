@@ -108,13 +108,13 @@ export function ProductDetailBrowser({ productId }: Readonly<{ productId: string
       <section className="productDetailGrid">
         <div className="productGallery">
           <div className="productHeroImage">
-            {image ? <img src={image.url} alt={image.altText ?? product.name} /> : <span className="catalogImageFallback">CN</span>}
+            {image ? <img src={image.url} alt={image.altText ?? product.name} decoding="async" fetchPriority="high" /> : <span className="catalogImageFallback">CN</span>}
           </div>
           {product.media.length > 1 ? (
             <div className="productThumbs" aria-label="Product images">
               {product.media.map((media, index) => (
                 <button key={media.id} type="button" className={index === activeImage ? "productThumb productThumbActive" : "productThumb"} aria-label={`View image ${index + 1}`} aria-pressed={index === activeImage} onClick={() => setActiveImage(index)}>
-                  <img src={media.url} alt="" />
+                  <img src={media.url} alt="" loading="lazy" decoding="async" fetchPriority="low" />
                 </button>
               ))}
             </div>

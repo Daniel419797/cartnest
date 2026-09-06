@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { AuthGuard } from "../../components/auth-guard";
 import { useSession } from "../../components/session-provider";
+import { PrivacyCenter } from "../../features/privacy/privacy-center";
 import { API_BASE_URL, api, apiErrorMessage } from "../../lib/api";
 
 function AccountPanel() {
@@ -37,7 +38,7 @@ function AccountPanel() {
     <section className="panel">
       <p className="eyebrow">Your account</p>
       <h1 className="pageTitle">Identity & security</h1>
-      <p className="muted">This identity can act as a customer and, in later frontend phases, participate in one or more vendor businesses according to backend memberships.</p>
+      <p className="muted">Your CartNest identity can act as a customer and participate in vendor businesses according to server-authorized memberships and permissions.</p>
       <dl className="details">
         <div><dt>Email</dt><dd>{session.user.email ?? "Not added"} {session.user.email ? <span className={`statusPill ${session.user.emailVerified ? "statusPillGood" : ""}`}>{session.user.emailVerified ? "Verified" : "Unverified"}</span> : null}</dd></div>
         <div><dt>Phone</dt><dd>{session.user.phone ?? "Not added"} {session.user.phone ? <span className={`statusPill ${session.user.phoneVerified ? "statusPillGood" : ""}`}>{session.user.phoneVerified ? "Verified" : "Unverified"}</span> : null}</dd></div>
@@ -61,5 +62,14 @@ function AccountPanel() {
 }
 
 export default function AccountPage() {
-  return <main className="pageShell"><AuthGuard><AccountPanel /></AuthGuard></main>;
+  return (
+    <main className="pageShell">
+      <AuthGuard>
+        <div className="commerceStack">
+          <AccountPanel />
+          <PrivacyCenter />
+        </div>
+      </AuthGuard>
+    </main>
+  );
 }

@@ -21,6 +21,19 @@ export const PrivacyRequestSchema = Type.Object(
 );
 export type PrivacyRequestDto = Static<typeof PrivacyRequestSchema>;
 
+export const AdminPrivacyRequestSchema = Type.Object(
+  {
+    id: UuidSchema,
+    subjectUserId: UuidSchema,
+    status: PrivacyRequestStatusSchema,
+    reviewNote: Type.Union([Type.String(), Type.Null()]),
+    requestedAt: IsoTimestampSchema,
+    processedAt: Type.Union([IsoTimestampSchema, Type.Null()]),
+  },
+  { additionalProperties: false },
+);
+export type AdminPrivacyRequestDto = Static<typeof AdminPrivacyRequestSchema>;
+
 export const PrivacyRequestListQuerySchema = Type.Object(
   {
     page: Type.Optional(Type.Integer({ minimum: 1, default: 1 })),
@@ -39,6 +52,15 @@ export const PrivacyRequestListResponseSchema = Type.Object(
   { additionalProperties: false },
 );
 export type PrivacyRequestListResponseDto = Static<typeof PrivacyRequestListResponseSchema>;
+
+export const AdminPrivacyRequestListResponseSchema = Type.Object(
+  {
+    items: Type.Array(AdminPrivacyRequestSchema),
+    pagination: PaginationMetaSchema,
+  },
+  { additionalProperties: false },
+);
+export type AdminPrivacyRequestListResponseDto = Static<typeof AdminPrivacyRequestListResponseSchema>;
 
 export const PrivacyRequestIdParamsSchema = Type.Object(
   { privacyRequestId: UuidSchema },

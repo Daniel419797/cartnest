@@ -9,7 +9,13 @@ export function CatalogProductCard({ product }: Readonly<{ product: CatalogProdu
     <article className="catalogCard">
       <Link className="catalogCardImage" href={`/products/${encodeURIComponent(product.id)}`} aria-label={`View ${product.name}`}>
         {primaryImage ? (
-          <img src={primaryImage.url} alt={primaryImage.altText ?? product.name} loading="lazy" />
+          <img
+            src={primaryImage.url}
+            alt={primaryImage.altText ?? product.name}
+            loading="lazy"
+            decoding="async"
+            fetchPriority="low"
+          />
         ) : (
           <span className="catalogImageFallback" aria-hidden="true">CN</span>
         )}

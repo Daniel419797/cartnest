@@ -55,7 +55,7 @@ function CartLine({
   return (
     <article className="cartLine">
       <div className="cartLineImage">
-        {image ? <img src={image.url} alt={image.altText ?? item.product.name} /> : <span className="commerceImageFallback">CN</span>}
+        {image ? <img src={image.url} alt={image.altText ?? item.product.name} loading="lazy" decoding="async" fetchPriority="low" /> : <span className="commerceImageFallback">CN</span>}
       </div>
       <div className="cartLineBody">
         <h3><Link href={`/products/${encodeURIComponent(item.product.id)}`}>{item.product.name}</Link></h3>

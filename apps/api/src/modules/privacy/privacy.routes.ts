@@ -1,5 +1,6 @@
 import { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
 import {
+  AdminPrivacyRequestListResponseSchema,
   ApiErrorSchema,
   PrivacyExportSchema,
   PrivacyRequestIdParamsSchema,
@@ -111,7 +112,7 @@ export function registerPrivacyRoutes(app: FastifyInstance, options: PrivacyRout
       tags: ["admin", "privacy"],
       operationId: "listAdminErasureRequests",
       querystring: PrivacyRequestListQuerySchema,
-      response: { 200: PrivacyRequestListResponseSchema, ...commonErrors },
+      response: { 200: AdminPrivacyRequestListResponseSchema, ...commonErrors },
     },
   }, async (request, reply) => {
     try {

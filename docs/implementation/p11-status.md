@@ -1,53 +1,36 @@
 # P11 — Hardening, Performance, Security, and NDPR Status
 
 **Phase:** P11  
-**Status:** Backend/operations source baseline implemented; runtime security, load, migration, restore, and provider evidence remain pending  
-**Updated:** 5 September 2026
+**Status:** Backend/operations + frontend integration source baselines implemented; runtime security, migration, load, accessibility, provider, and recovery evidence remain pending  
+**Updated:** 6 September 2026
 
 ## 1. Scope
 
-P11 hardens the P0–P10 backend baseline before staging/UAT. The implemented source work covers:
+P11 hardens the P0–P10 marketplace before staging/UAT. Source work now covers both API/operations and browser integration:
 
 - restrictive API security headers;
-- non-cacheable authentication/admin/privacy responses;
-- generic unexpected-error responses and reduced sensitive error logging;
-- privacy/data-subject export contracts and routes;
-- account-erasure request workflow;
-- administrator-reviewed anonymisation;
-- active-business/fulfilment erasure blockers;
+- web-compatible Next.js CSP/security headers;
+- no-store handling for sensitive API and web routes;
+- generic unexpected-error redaction;
+- privacy/data-subject export;
+- account-erasure request/history workflow;
+- privileged MFA-gated erasure review/anonymization;
+- concurrency-safe privacy processing;
 - NDPR-oriented retention/erasure standard;
-- privacy-request persistence and database constraints;
-- performance/read-path index review;
+- privacy-request persistence and PostgreSQL constraints;
+- performance/read-path candidate indexes;
 - configurable HTTP benchmark harness;
-- repository secret scanning;
-- dependency audit CI gate;
-- PostgreSQL backup automation;
-- guarded PostgreSQL restore automation;
-- P11 contract/API security tests;
-- production hardening composition used by the actual API server and OpenAPI generator.
+- repository secret scanning and dependency audit gates;
+- PostgreSQL backup/restore automation;
+- low-bandwidth commerce-image loading hints;
+- preservation of keyboard focus/reduced-motion accessibility controls;
+- P11 contract/API security coverage.
 
-Frontend low-bandwidth, image-optimization, browser CSP, and accessibility performance work remain intentionally deferred to the agreed frontend/integration pass.
+Detailed frontend evidence is recorded in `docs/implementation/frontend-p11-status.md`.
 
-## 2. Hardened API Composition
+## 2. API hardening
 
-The production server now uses:
-
-```text
-buildApp (P0-P10 modules)
-        ↓
-buildHardenedApp
-        ├── P11 response security headers
-        ├── P11 generic/redacted unexpected-error handling
-        └── Privacy/NDPR routes
-        ↓
-server.ts
-```
-
-OpenAPI generation also uses `buildHardenedApp`, so P11 privacy routes become part of the machine-readable contract once code generation can execute.
-
-## 3. Security Headers
-
-The P11 API response baseline adds:
+Production API composition uses `buildHardenedApp`, which applies:
 
 ```text
 X-Content-Type-Options: nosniff
@@ -58,95 +41,68 @@ Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'n
 Strict-Transport-Security: max-age=31536000; includeSubDomains   # production only
 ```
 
-The restrictive API CSP is intentionally not applied to the non-production Swagger UI route because Swagger requires browser assets/behavior and is not registered in production.
+Sensitive `/api/v1/auth`, `/api/v1/privacy`, and `/api/v1/admin` responses receive no-store handling.
 
-Authenticated/sensitive prefixes receive:
+Unexpected errors are reduced to bounded classification metadata in logs and generic client envelopes; request bodies, cookies, provider payloads, and nested exception data are not intentionally exposed by the P11 handler.
+
+## 3. Browser hardening
+
+The Next.js application now adds:
+
+- Content-Security-Policy compatible with current Next hydration;
+- anti-framing and object restrictions;
+- Referrer-Policy;
+- X-Content-Type-Options;
+- X-Frame-Options;
+- Permissions-Policy;
+- production HSTS;
+- `poweredByHeader: false`;
+- Paystack/Flutterwave frame allowances;
+- configured API-origin connectivity.
+
+Authenticated/sensitive web route families receive:
 
 ```text
-Cache-Control: no-store
+Cache-Control: private, no-store, max-age=0
 Pragma: no-cache
 ```
 
-for `/api/v1/auth`, `/api/v1/privacy`, and `/api/v1/admin` responses.
+for account, admin, notifications, checkout, orders, returns, and vendor workspaces.
 
-The future Next.js browser application requires its own CSP because frontend script/style/payment requirements differ from a JSON API.
+This source policy still requires staging browser verification against OAuth, payment, media, and API traffic before production.
 
-## 4. Unexpected Error Redaction
+## 4. Secret, dependency, and abuse controls
 
-P11 replaces the base generic error handler in the hardened composition.
-
-Unexpected errors are logged only with a limited classification:
-
-```text
-errorName
-errorCode
-statusCode
-requestId
-```
-
-The handler does not intentionally log request bodies, cookies, provider payloads, or nested error objects. Client responses remain generic and do not expose internal exception messages.
-
-Expected module errors continue to use their stable typed error envelopes.
-
-## 5. Secret and Dependency Security Gates
-
-Root commands now include:
+Root commands include:
 
 ```bash
 pnpm security:scan
 pnpm security:audit
 ```
 
-`security:scan` checks tracked text source for high-confidence credential patterns including private keys, Paystack/Flutterwave secret-key forms, GitHub tokens, OpenAI keys, and AWS access-key IDs.
+The CI definition places secret scanning and high/critical dependency auditing before the normal lint/Prisma/codegen/typecheck/test/build gates.
 
-The CI definition now adds:
+Existing route-specific authentication abuse controls remain in place, including login/register/reset/verification/TOTP rate limits, CSRF validation, CORS/origin validation, HttpOnly sessions, refresh rotation, and privileged MFA.
 
-```text
-secret scan
-high/critical dependency audit
-```
+A single indiscriminate global rate limit is intentionally not used for every marketplace/provider/webhook route. Staging traffic evidence should determine endpoint/provider tuning.
 
-before normal lint/Prisma/codegen/typecheck/test/build gates.
+## 5. Data-subject export
 
-These are committed gates, not a claim that the current GitHub Actions infrastructure has executed them successfully; Actions is still failing before any job is created.
-
-## 6. Existing Authentication/Abuse Controls Reviewed
-
-P11 retains the P2 controls already present:
-
-- login/register/reset/verification/TOTP route-specific rate limits;
-- CSRF token validation on cookie-authenticated mutations;
-- CORS allowlist;
-- mutating Origin validation;
-- HttpOnly access/refresh/MFA cookies;
-- 15-minute access lifetime;
-- rotating/revocable 30-day refresh sessions;
-- server-side backing-session verification;
-- privileged MFA for ADMIN/SUPER_ADMIN.
-
-A single indiscriminate global rate limit is deliberately not added at source level because customer traffic, webhooks, provider callbacks, and administrative operations have different safe limits. Endpoint/provider-specific tuning is a P12 staging exercise based on realistic traffic and provider retry behavior.
-
-## 7. NDPR / Data Subject Export
-
-P11 establishes:
+Authenticated users can use:
 
 ```text
 GET /api/v1/privacy/export
 ```
 
-The export is authenticated, no-store, and returns a machine-readable account-data package containing the subject's relevant application data while intentionally excluding:
+The export is no-store and excludes password hashes, session hashes, MFA secrets, provider credentials, and other users' private data.
 
-- password hashes;
-- session/refresh token hashes;
-- MFA secrets;
-- provider credentials;
-- other users' private data.
+The source package includes relevant account/contact data, addresses, vendor memberships/permissions, orders/commercial snapshots, reviews, returns, and notification preferences.
 
-The source export covers account/contact data, saved addresses, vendor memberships/permissions, orders/commercial snapshots, reviews, return records, and notification preferences.
+The Account workspace now exposes this capability as a downloadable JSON export.
 
-## 8. Account Erasure Workflow
+## 6. Account erasure workflow
 
-Buyer endpoints:
+User endpoints:
 
 ```text
 POST /api/v1/privacy/erasure-requests
@@ -160,23 +116,20 @@ GET  /api/v1/admin/privacy/erasure-requests
 POST /api/v1/admin/privacy/erasure-requests/:privacyRequestId/process
 ```
 
-Administrative processing requires:
+The web application now provides:
 
-```text
-authenticated principal
-        ↓
-ADMIN / SUPER_ADMIN
-        ↓
-privileged MFA
-        ↓
-ANONYMIZE or REJECT
-```
+- user request/history controls under `/account`;
+- explicit acknowledgement before erasure submission;
+- admin privacy review under `/admin`;
+- subject identity on privileged queue records;
+- explicit reviewed reason for ANONYMIZE/REJECT;
+- destructive-action confirmation before anonymization.
 
-Every request/decision is audited.
+Server role/MFA/blocker checks remain authoritative.
 
-## 9. Erasure Safety Blockers
+## 7. Erasure safety and concurrency
 
-Automatic anonymisation is blocked when the subject has any active obligation that cannot safely disappear:
+Anonymization is blocked for:
 
 ```text
 privileged platform role
@@ -186,184 +139,139 @@ open returns
 open refunds initiated by the subject
 ```
 
-A blocked request enters `REQUIRES_REVIEW` rather than pretending erasure succeeded.
+Concurrency hardening now includes:
 
-This is particularly important for marketplace vendors: an active OWNER must transfer/close the business responsibility before account anonymisation can proceed.
+- database partial unique index: one active PENDING/REQUIRES_REVIEW request per user;
+- concurrent create conflict (`P2002`) re-read/return behavior rather than a 500;
+- compare-and-set admin reject decisions;
+- serializable anonymization transaction;
+- blocker revalidation inside the destructive transaction;
+- compare-and-set anonymization claim;
+- Prisma serialization conflict (`P2034`) mapped to 409 state conflict.
 
-## 10. Approved Anonymisation Effect
+This prevents stale admin eligibility from silently erasing against newly changed account obligations.
 
-When an administrator approves an eligible erasure request, the P11 source transaction:
+## 8. Approved anonymization effect
 
-- removes AuthIdentity rows;
-- removes AuthSession rows;
-- removes MFA factors;
-- removes saved addresses;
-- removes wishlist/cart data;
-- removes notification receipts/preferences;
-- redacts notification recipient/payload data;
-- clears review free text;
-- redacts return free-text reasons;
-- redacts historical delivery-address snapshots;
-- removes non-owner staff memberships from active use;
-- clears email, phone, normalized identifiers, password hash, and verification timestamps;
-- resets platform role to USER;
-- disables the account;
-- retains the opaque User UUID where commercial/audit relational integrity requires a pseudonymous key;
-- marks the PrivacyRequest completed;
-- records an AuditLog entry.
+An approved eligible request removes/redacts ordinary identity and authentication material while retaining opaque/pseudonymous commercial references required for integrity.
 
-This preserves financial/order evidence without retaining ordinary account credentials/contact data unnecessarily.
+The transaction removes or redacts:
 
-## 11. Retention Policy
+- AuthIdentity/AuthSession/MFA factors;
+- saved addresses;
+- wishlist/cart data;
+- notification receipts/preferences and recipient/payload data;
+- review free text;
+- return free-text reasons;
+- historical delivery-address snapshots;
+- active non-owner staff membership use;
+- email/phone/normalized identifiers/password hash/verification timestamps.
 
-The detailed policy is:
+The User UUID remains where financial/order/audit relational integrity requires a pseudonymous key. The account is disabled, the request is finalized, and an audit entry is written.
 
-```text
-docs/security/data-retention-and-erasure-standard.md
-```
+## 9. Retention policy
 
-P11 intentionally does **not** invent legal retention periods for Nigerian financial/KYC/audit data.
+See:
 
-Before production, business/legal review must approve numeric retention schedules for financial records, KYC, provider events, disputes/refunds, security logs, notifications, backups, and ephemeral data. Worker/operations jobs can then enforce those approved values.
+`docs/security/data-retention-and-erasure-standard.md`
 
-## 12. Privacy Persistence
+P11 intentionally does not invent statutory retention periods. Before production, Nigerian legal/business review must approve concrete schedules for financial records, KYC, provider events, disputes/refunds, security logs, notifications, backups, and ephemeral data.
 
-P11 introduces:
+## 10. Persistence and query/index review
 
-```text
-packages/database/prisma/p11.prisma
-```
-
-with `PrivacyRequest` and `PrivacyRequestStatus`.
-
-Reviewed raw PostgreSQL source adds:
+P11 introduces `PrivacyRequest` persistence plus reviewed raw PostgreSQL source for:
 
 - PrivacyRequest → User FK;
 - processedBy → User FK;
-- partial unique index permitting only one active privacy request per user.
+- one-active-request partial unique index;
+- Order(createdAt DESC);
+- VendorOrder(storeId, createdAt DESC);
+- Refund(createdAt DESC);
+- PaymentIntent(status, createdAt DESC).
 
-This source belongs in the reviewed migration rather than being executed ad hoc.
+These are source candidates until the migration is applied and query plans are measured with realistic staging data.
 
-## 13. Query and Index Review
+## 11. Performance and low-bandwidth source work
 
-The P10 admin/analytics surfaces created new range-heavy reads. P11 adds reviewed PostgreSQL index source for:
-
-```text
-Order(createdAt DESC)
-VendorOrder(storeId, createdAt DESC)
-Refund(createdAt DESC)
-PaymentIntent(status, createdAt DESC)
-```
-
-The final index decision still requires `EXPLAIN (ANALYZE, BUFFERS)` against realistic staging data before production. P11 source indexes are candidates backed by current query shapes, not proof of production performance.
-
-## 14. Performance Harness
-
-Root command:
+Root benchmark command:
 
 ```bash
 pnpm perf:benchmark
 ```
 
-The Node-based harness supports configurable:
+The harness supports configurable URL/path/method/request count/concurrency/headers/body/idempotency/P95/error budgets.
 
-```text
-base URL
-path
-HTTP method
-request count
-concurrency
-headers
-body
-unique Idempotency-Key generation
-P95 budget
-error-rate budget
-```
+Frontend low-bandwidth improvements now include lazy loading, async decoding, and low fetch priority for non-critical product/cart/wishlist/gallery images. The active product hero retains high fetch priority for LCP.
 
-This makes it possible to run the same tool against read paths or controlled seeded checkout/payment scenarios during P12.
+The production media CDN/transformation contract is not yet fixed, so FP11 does not hard-code a fragile Next Image remote-host list. Responsive CDN derivatives remain a staging/media-infrastructure optimization once the production hostname/transformation behavior is known.
 
-Default thresholds are only development smoke values. Real checkout/payment SLO/load targets must be measured and approved in staging.
+## 12. Accessibility source review
 
-## 15. Backup and Restore Automation
+The existing web baseline already includes:
 
-P11 adds:
+- global `:focus-visible` treatment;
+- form-control focus indication;
+- semantic fieldsets/legends on inspected option selectors;
+- `prefers-reduced-motion: reduce` handling.
+
+Source review is not equivalent to an accessibility audit. Keyboard, screen-reader, zoom, contrast, and reduced-motion behavior must still be exercised in a real browser.
+
+## 13. Backup and restore automation
+
+Root commands:
 
 ```bash
 pnpm db:backup
 pnpm db:restore
 ```
 
-### Backup
+Backup uses `pg_dump` custom format without owner/ACL metadata; restore requires `CONFIRM_RESTORE=YES`, uses clean/if-exists/no-owner/no-acl, one transaction, and exits on error.
 
-`postgres-backup.mjs`:
+The scripts are not disaster-recovery evidence. P12 must execute an isolated backup/restore rehearsal and verify business invariants afterward.
 
-- requires `DATABASE_URL`;
-- invokes `pg_dump` in custom format;
-- excludes owner/ACL metadata;
-- uses `PGPASSWORD` rather than embedding the password in the command arguments;
-- writes timestamped dumps to `BACKUP_DIR` (default `backups/`).
+## 14. P11 tests/source evidence
 
-### Restore
+Source coverage includes:
 
-`postgres-restore.mjs`:
-
-- requires `DATABASE_URL`;
-- requires `RESTORE_FILE`;
-- refuses to run unless `CONFIRM_RESTORE=YES`;
-- invokes `pg_restore` with clean/if-exists/no-owner/no-acl;
-- uses one transaction and exits on error.
-
-A script existing is not a successful disaster-recovery test. P12 must execute an actual backup + restore rehearsal on isolated staging infrastructure and verify business invariants afterward.
-
-## 16. P11 Tests Added
-
-Source tests now cover:
-
-- security header presence;
-- no-store privacy/auth response behavior;
-- generic unexpected errors not leaking their internal message to HTTP clients;
+- API security headers;
+- privacy/auth no-store behavior;
+- unexpected-error redaction;
 - privacy/OpenAPI route registration;
-- auth required before personal-data export;
-- privacy pagination contract;
-- explicit reviewed anonymise/reject contract.
+- authentication before data export;
+- privacy pagination/decision contracts;
+- privileged admin queue subject identity contract;
+- earlier-phase CSRF/session/payment/inventory/refund/provider integrity tests.
 
-Existing earlier-phase tests remain relevant to P11's threat-model verification, including CSRF/CORS/session rules, vendor ownership, payment webhook integrity/idempotency, inventory concurrency, refunds, and provider state handling.
+No test is claimed executed on this branch while GitHub Actions is still producing synthetic `BuildFailed`/`startup_failure` runs with zero jobs.
 
-## 17. P11 Exit-Gate Assessment
+## 15. Exit-gate assessment
 
-The implementation plan's P11 exit gate is:
+The plan's P11 gate is:
 
 > No known critical security issue, financial invariant failure, or unrecoverable backup gap remains.
 
-That gate **cannot yet be claimed as runtime verified** because:
+That gate is **not runtime verified** yet because:
 
-- GitHub Actions still creates zero jobs;
-- dependency audit has therefore not executed in trusted CI;
-- Prisma P11 migration has not been applied/reviewed against PostgreSQL;
-- performance/load tests have not run against staging data;
-- a backup restore drill has not executed;
-- external-provider resilience exercises remain staging tasks;
-- frontend/low-bandwidth/image hardening is intentionally deferred until the frontend integration pass.
+- GitHub Actions still creates zero real jobs;
+- security/dependency/lint/typecheck/test/build commands therefore lack trusted CI evidence;
+- P11 migration/constraint/index SQL has not been exercised against PostgreSQL;
+- privacy concurrency behavior lacks real PostgreSQL execution evidence;
+- CSP/no-store/payment/OAuth/media behavior lacks browser evidence;
+- accessibility and low-bandwidth audits are pending;
+- load/query-plan evidence is pending;
+- backup/restore rehearsal is pending;
+- provider resilience exercises are pending;
+- legal retention schedules remain unapproved.
 
-The correct status is therefore **P11 source baseline implemented, execution gate pending**.
+Correct status: **P11 backend + frontend source integration implemented; execution gate pending.**
 
-## 18. Current Phase Position
+## 16. Current phase position
 
 ```text
-P0  Repository/tooling foundation            implemented source baseline
-P1  Database + contracts                     implemented source baseline
-P2  Identity/auth/session/authorization       implemented source baseline
-P3  Vendor/store/KYC/membership               implemented source baseline
-P4  Catalog/variants/media                    implemented source baseline
-P5  Inventory/wishlist/cart                   implemented source baseline
-P6  Checkout/orders/reservations              implemented source baseline
-P7  Payments/commission/webhooks              implemented source baseline
-P8  Logistics/shipments                       implemented source baseline
-P9  Returns/refunds/reviews                   implemented source baseline
-P10 Admin/analytics/promotions/tax/notifs      implemented source baseline
-P11 Hardening/performance/security/NDPR        implemented source baseline
+P0–P10  feature/source baselines              implemented
+P11     hardening/security/performance/NDPR   backend + frontend source integrated
 
-NEXT: P12 Staging / UAT / Recovery Rehearsals
+NEXT: P12 staging / UAT / recovery rehearsals
 ```
 
-P12 is where the project must stop relying on source inspection and begin producing environment-backed evidence: migrations, provider sandboxes, backup restore, security checks, load tests, operational runbooks, and UAT.
+P12 must convert source assumptions into environment-backed evidence: migrations, provider sandboxes, security checks, load tests, accessibility/browser QA, backup/restore, runbooks, and UAT.
