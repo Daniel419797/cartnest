@@ -148,7 +148,9 @@ export const AdminUserSummarySchema = Type.Object({
   platformRole: Type.String(),
   createdAt: IsoTimestampSchema,
 }, { additionalProperties: false });
+export type AdminUserSummaryDto = Static<typeof AdminUserSummarySchema>;
 export const AdminUserListResponseSchema = Type.Object({ items: Type.Array(AdminUserSummarySchema), pagination: PaginationMetaSchema }, { additionalProperties: false });
+export type AdminUserListResponseDto = Static<typeof AdminUserListResponseSchema>;
 
 export const AdminOrderSummarySchema = Type.Object({
   id: UuidSchema,
@@ -159,7 +161,9 @@ export const AdminOrderSummarySchema = Type.Object({
   grandTotal: MoneySchema,
   createdAt: IsoTimestampSchema,
 }, { additionalProperties: false });
+export type AdminOrderSummaryDto = Static<typeof AdminOrderSummarySchema>;
 export const AdminOrderListResponseSchema = Type.Object({ items: Type.Array(AdminOrderSummarySchema), pagination: PaginationMetaSchema }, { additionalProperties: false });
+export type AdminOrderListResponseDto = Static<typeof AdminOrderListResponseSchema>;
 
 export const AdminPaymentSummarySchema = Type.Object({
   id: UuidSchema,
@@ -169,7 +173,9 @@ export const AdminPaymentSummarySchema = Type.Object({
   createdAt: IsoTimestampSchema,
   updatedAt: IsoTimestampSchema,
 }, { additionalProperties: false });
+export type AdminPaymentSummaryDto = Static<typeof AdminPaymentSummarySchema>;
 export const AdminPaymentListResponseSchema = Type.Object({ items: Type.Array(AdminPaymentSummarySchema), pagination: PaginationMetaSchema }, { additionalProperties: false });
+export type AdminPaymentListResponseDto = Static<typeof AdminPaymentListResponseSchema>;
 
 export const AdminRefundSummarySchema = Type.Object({
   id: UuidSchema,
@@ -180,7 +186,9 @@ export const AdminRefundSummarySchema = Type.Object({
   reason: Type.String(),
   createdAt: IsoTimestampSchema,
 }, { additionalProperties: false });
+export type AdminRefundSummaryDto = Static<typeof AdminRefundSummarySchema>;
 export const AdminRefundListResponseSchema = Type.Object({ items: Type.Array(AdminRefundSummarySchema), pagination: PaginationMetaSchema }, { additionalProperties: false });
+export type AdminRefundListResponseDto = Static<typeof AdminRefundListResponseSchema>;
 
 export const NotificationSchema = Type.Object({
   id: UuidSchema,

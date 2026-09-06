@@ -1,11 +1,13 @@
 import {
   CartNestApiError,
+  createAdminApi,
   createCartApi,
   createCartNestApiClient,
   createCatalogApi,
   createContractRequestClient,
   createInventoryApi,
   createLogisticsApi,
+  createNotificationsApi,
   createOrdersApi,
   createPaymentsApi,
   createReturnsApi,
@@ -45,6 +47,8 @@ export const ordersApi = createOrdersApi(contractApi);
 export const logisticsApi = createLogisticsApi(contractApi);
 export const paymentsApi = createPaymentsApi(contractApi);
 export const returnsApi = createReturnsApi(contractApi);
+export const adminApi = createAdminApi(contractApi);
+export const notificationsApi = createNotificationsApi(contractApi);
 
 export function apiErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof CartNestApiError) return error.message;

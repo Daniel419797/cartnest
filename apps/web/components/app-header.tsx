@@ -27,8 +27,9 @@ export function AppHeader() {
               <Link className="navLink commerceNavLink" aria-current={cartActive ? "page" : undefined} href="/cart">Cart</Link>
               <Link className="navLink commerceNavLink" aria-current={pathname.startsWith("/orders") ? "page" : undefined} href="/orders">Orders</Link>
               <Link className="navLink commerceNavLink" aria-current={pathname.startsWith("/returns") ? "page" : undefined} href="/returns">Returns</Link>
+              <Link className="navLink commerceNavLink" aria-current={pathname.startsWith("/notifications") ? "page" : undefined} href="/notifications">Notifications</Link>
               <Link className="navLink" aria-current={pathname.startsWith("/vendor") ? "page" : undefined} href="/vendor">Seller</Link>
-              {admin ? <Link className="navLink" aria-current={pathname.startsWith("/admin") ? "page" : undefined} href="/admin/p9">Admin</Link> : null}
+              {admin ? <Link className="navLink" aria-current={pathname.startsWith("/admin") ? "page" : undefined} href="/admin">Admin</Link> : null}
               <Link className="navLink" aria-current={pathname.startsWith("/account") ? "page" : undefined} href="/account">Account</Link>
               {session?.mfa.required && !session.mfa.satisfied ? <Link className="navLink navLinkAlert" href="/mfa">Verify MFA</Link> : null}
               <button className="navButton" type="button" onClick={() => void logout()}>Sign out</button>

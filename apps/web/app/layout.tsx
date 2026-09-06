@@ -9,6 +9,7 @@ import "./commerce.css";
 import "./orders.css";
 import "./orders-payments.css";
 import "./navigation.css";
+import "./fp10.css";
 
 export const metadata: Metadata = {
   title: {

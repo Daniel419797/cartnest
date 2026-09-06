@@ -152,7 +152,15 @@ export class NotificationService {
         status: "ACTIVE",
         OR: [
           { role: "OWNER" },
-          { permissions: { some: { permission: "order:read" } } },
+          {
+            permissions: {
+              some: {
+                permission: {
+                  in: ["order:read", "order:process", "order:fulfill", "refund:request"],
+                },
+              },
+            },
+          },
         ],
       },
       include: { user: { select: { id: true, email: true, phone: true } } },
@@ -415,10 +423,22 @@ export class NotificationService {
       throw new NotificationError("NOTIFICATION_NOT_RETRYABLE", "Notification is not in a retryable state.", 409);
     }
     await this.database.$transaction(async (tx) => {
-      await tx.notification.update({
-        where: { id: notificationId },
+      const changed = await tx.notification.updateMany({
+        where: {
+          id: notificationId,
+          updatedAt: notification.updatedAt,
+          channel: { not: "IN_APP" },
+          status: { in: ["FAILED", "QUEUED"] },
+        },
         data: { status: "QUEUED", nextAttemptAt: new Date(), failedAt: null, lastError: null },
       });
+      if (changed.count !== 1) {
+        throw new NotificationError(
+          "NOTIFICATION_RETRY_STATE_CONFLICT",
+          "Notification state changed before the retry could be queued. Refresh and try again.",
+          409,
+        );
+      }
       await writeAuditEntry(tx, {
         actorType: "USER",
         actorUserId: principal.userId,

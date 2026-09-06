@@ -1,12 +1,12 @@
 # P10 — Admin, Analytics, Promotions, Tax, and Notifications Status
 
 **Phase:** P10  
-**Status:** Backend/domain source baseline implemented; frontend/generated-client integration and runtime/CI execution evidence remain pending  
-**Updated:** 5 September 2026
+**Status:** Backend/domain and frontend/API-integration source baselines implemented; runtime, migration, provider, and CI evidence remain pending  
+**Updated:** 6 September 2026
 
 ## 1. Scope
 
-P10 closes the marketplace-management and commercial-policy gaps left by earlier phases. The implemented source baseline covers:
+P10 closes the marketplace-management and commercial-policy gaps left by earlier phases. The current source baseline covers:
 
 - privileged marketplace administration;
 - platform and store analytics;
@@ -22,14 +22,15 @@ P10 closes the marketplace-management and commercial-policy gaps left by earlier
 - notification retry/operational queries;
 - stable versioned notification-template registry;
 - unified admin order/payment/refund/fulfillment case view;
-- P10 TypeBox/OpenAPI contracts and route tests;
-- additional PostgreSQL constraint source.
+- shared TypeBox/OpenAPI contracts;
+- typed browser API clients;
+- Next.js admin, customer-notification, and vendor-analytics surfaces.
 
-Frontend/UI remains intentionally deferred until the backend phase sequence is complete. CartNest will later circle back through P2–P10 in the same phase order for Next.js UI and generated-client integration.
+The dedicated frontend integration evidence is recorded in `docs/implementation/frontend-p10-status.md`.
 
-## 2. Admin Authorization Boundary
+## 2. Authorization boundaries
 
-All platform-admin capabilities continue to use the P2 security boundary:
+Platform administration continues to use the P2 security boundary:
 
 ```text
 authenticated principal
@@ -41,13 +42,13 @@ privileged MFA satisfied
 admin operation
 ```
 
-Read-only store analytics are also available to vendor users with the server-resolved `analytics:read` permission for that store.
+Store analytics is also available to vendor users with server-resolved `analytics:read` access.
 
-No client-supplied role, vendor ID, store ID, or user ID is accepted as authorization proof.
+No browser-supplied role, vendor ID, store ID, or user ID is accepted as authorization proof.
 
-## 3. Admin Operations Surface
+## 3. Admin operations surface
 
-P10 provides administrative list/read surfaces for:
+Implemented API surfaces include:
 
 ```text
 GET /api/v1/admin/analytics
@@ -61,7 +62,7 @@ GET /api/v1/admin/promotions
 GET /api/v1/admin/notifications
 ```
 
-The order operations endpoint is the primary P10 exit-gate view. It combines the commercial state of one order without requiring direct database access:
+The unified order-operations endpoint combines:
 
 ```text
 Order
@@ -71,36 +72,31 @@ Order
 │   ├── tax
 │   ├── gateway fee
 │   └── fulfillment state
-├── PaymentIntents
-│   └── PaymentAttempts
+├── PaymentIntents / PaymentAttempts
 ├── PaymentAllocations
 ├── Refunds
 ├── Shipments
 └── ReturnRequests
 ```
 
-The response uses shared TypeBox contracts and does not expose raw Prisma models.
+The Next.js `/admin` console now consumes this contract directly, so an administrator can explain an order/payment/refund case without direct database access.
 
-## 4. Platform and Store Analytics
+## 4. Analytics
 
-### Platform analytics
+Platform analytics exposes:
 
-The baseline exposes:
-
-- registered-user count;
-- approved-vendor count;
-- active-store count;
-- active/public-product count;
-- total orders in the requested range;
-- paid/refunded-payment-state orders;
+- registered users;
+- approved vendors;
+- active stores;
+- active/public products;
+- order count;
+- paid-order count;
 - gross merchandise value;
 - refunded value;
-- pending return count;
-- failed notification count.
+- pending returns;
+- failed notifications.
 
-### Store/vendor analytics
-
-The baseline exposes:
+Store analytics exposes:
 
 - VendorOrder count;
 - delivered order count;
@@ -112,48 +108,31 @@ The baseline exposes:
 - gateway fees;
 - refunded value.
 
-Money remains integer minor-unit money and is converted to the public `Money` DTO rather than JavaScript floating-point values.
+Money remains integer minor-unit money and is returned through shared `Money` DTOs.
 
-## 5. Tax Policy
+The vendor workspace now exposes `/vendor/:vendorId/analytics` when the resolved membership includes `analytics:read`.
 
-P10 makes the previously configured tax seam executable.
+## 5. Tax policy
 
-`TaxRate` contains:
-
-```text
-name
-rateBps
-active
-startsAt
-endsAt
-```
-
-Rates use basis points:
+`TaxRate` uses basis points:
 
 ```text
 7.5% = 750 bps
 100% = 10,000 bps
 ```
 
-Tax is applied to merchandise after the applied promotion discount and currently excludes delivery:
+Tax is applied to merchandise after promotion discount and currently excludes delivery:
 
 ```text
-taxable merchandise
-=
-item subtotal - discount
-
-Tax
-=
-taxable merchandise × rateBps / 10,000
+taxable merchandise = item subtotal - discount
+Tax = taxable merchandise × rateBps / 10,000
 ```
 
-Production checkout fails closed when no active tax policy can be resolved. Development/test environments may retain zero-value fallbacks for local work.
+Production checkout fails closed when no active tax policy can be resolved. Admin tax changes are audited. The P10 PostgreSQL constraint source includes the partial unique-index requirement that prevents multiple active platform tax policies under concurrent writes.
 
-Admin tax changes are audited. Application logic deactivates the previous active policy transactionally, and `packages/database/prisma/sql/p10-constraints.sql` adds the reviewed PostgreSQL partial unique-index source that prevents two active platform tax policies under concurrent writes.
+The `/admin` UI converts human percentage input to basis points and uses the typed tax contracts for create/activation mutations.
 
-## 6. Promotions and Coupons
-
-P10 implements the approved platform-controlled promotion baseline.
+## 6. Promotions and financial snapshots
 
 Supported promotion types:
 
@@ -162,97 +141,29 @@ PERCENTAGE
 FIXED_AMOUNT
 ```
 
-Supported controls:
+Supported controls include code normalization, time windows, minimum-order value, global redemption limits, per-user limits, fixed-amount currency, and percentage basis points.
 
-- normalized uppercase promotion code;
-- active/draft/paused/expired state;
-- start/end time;
-- minimum order amount;
-- global redemption limit;
-- per-user redemption limit;
-- fixed-amount currency;
-- percentage value in basis points.
+Checkout locks and revalidates a selected promotion during the order transaction before creating the `PromotionRedemption`, preventing casual global/per-user over-redemption under concurrency.
 
-Checkout accepts one optional promotion code.
-
-### Percentage promotion
-
-A percentage promotion is applied proportionally to each participating store through each store's merchandise subtotal.
-
-### Fixed-amount promotion
-
-A fixed discount is deterministically distributed between stores according to store merchandise subtotal, with the final store receiving the integer remainder so total allocated discount exactly equals the approved discount.
-
-## 7. Promotion Concurrency Safety
-
-Pre-checking coupon availability is not considered sufficient.
-
-During the checkout transaction CartNest locks the selected promotion and revalidates:
-
-```text
-promotion exists
-        ↓
-ACTIVE?
-        ↓
-within valid time window?
-        ↓
-global redemption capacity available?
-        ↓
-user redemption capacity available?
-        ↓
-create Order + PromotionRedemption atomically
-```
-
-This prevents simultaneous checkouts from casually exceeding global/per-user redemption limits.
-
-If promotion state changes after quote generation, checkout returns a promotion revalidation conflict instead of silently changing the customer's commercial terms.
-
-## 8. Financial Snapshot Allocation
-
-P10 also closes the line-level tax/discount snapshot gap.
-
-For each store:
+Store and line financial snapshots preserve these invariants:
 
 ```text
 VendorOrder.itemSubtotal
--
-VendorOrder.discount
-+
-VendorOrder.delivery
-+
-VendorOrder.tax
-=
-VendorOrder.total
-```
+- VendorOrder.discount
++ VendorOrder.delivery
++ VendorOrder.tax
+= VendorOrder.total
 
-Store discount is allocated across `OrderItem` rows using integer minor units. Tax is then allocated across the post-discount taxable bases.
-
-Therefore:
-
-```text
 Σ OrderItem discounts = VendorOrder discount
 Σ OrderItem taxes     = VendorOrder tax
 Σ VendorOrders        = parent Order totals
 ```
 
-The database constraint source continues to enforce the arithmetic relationships at persistence level once the reviewed migrations are applied.
+The `/admin` UI now provides promotion creation/status controls while checkout remains authoritative for applicability and redemption safety.
 
-## 9. Commission Interaction
+## 7. Notification architecture
 
-P10 retains the P7 commission resolution order:
-
-```text
-vendor + category
-vendor
-category
-platform default
-```
-
-Commission remains a separately snapshotted commercial component. In production, missing required platform commission configuration fails checkout closed rather than assuming a silent zero commission.
-
-## 10. Notification Architecture
-
-P10 implements the provider-neutral notification domain while preserving the design decision that no email/SMS vendor is selected merely to satisfy framework convenience.
+P10 remains provider-neutral:
 
 ```text
 Domain/Outbox event
@@ -264,21 +175,7 @@ Notification row
 IN_APP → delivered internally
 EMAIL  → QUEUED for provider adapter
 SMS    → QUEUED for provider adapter
-       ↓
-provider-neutral NotificationChannelAdapter
 ```
-
-External channel adapters expose normalized results:
-
-```text
-accepted
-retryable_failure
-permanent_failure
-```
-
-Provider template IDs are intentionally not CartNest domain identifiers.
-
-## 11. Implemented Notification Events
 
 The current materialization boundary covers:
 
@@ -290,51 +187,11 @@ refund.succeeded
 return.status_changed
 ```
 
-Customer and vendor recipients are resolved from trusted database relationships.
+Customer and vendor recipients are resolved from trusted database relationships. Required vendor recipient resolution was corrected during FP10 integration so `order:process`, `order:fulfill`, and `refund:request` capabilities receive the same implied order-read treatment used by vendor authorization instead of requiring a literal `order:read` row.
 
-Representative stable template keys include:
+## 8. Notification preferences and operations
 
-```text
-order.created.customer.v1
-order.created.vendor.v1
-payment.succeeded.customer.v1
-payment.succeeded.vendor.v1
-shipment.delivered.customer.v1
-shipment.delivered.vendor.v1
-refund.succeeded.customer.v1
-refund.succeeded.vendor.v1
-return.status.customer.v1
-return.status.vendor.v1
-```
-
-The template registry also records priority, required/optional state, and the allowlisted variable vocabulary for each template.
-
-## 12. Required vs Optional Notifications
-
-Required service/payment/security notices are not disabled by ordinary notification preferences.
-
-Optional preferences support:
-
-```text
-channel
-scopeKey
-enabled
-```
-
-SMS is opt-in by default for optional notices. In-app/email optional notices default enabled unless a stored preference overrides them.
-
-## 13. In-App Notification State
-
-P10 adds:
-
-```text
-NotificationReceipt
-NotificationPreference
-```
-
-`NotificationReceipt` stores read state separately from the immutable logical notification row.
-
-Buyer endpoints:
+Buyer/customer endpoints:
 
 ```text
 GET  /api/v1/notifications
@@ -343,112 +200,85 @@ GET  /api/v1/notification-preferences
 PUT  /api/v1/notification-preferences
 ```
 
-The database constraint source adds foreign-key relationships for the receipt/preference records and an index optimized for user in-app notification history.
+The `/notifications` UI now exposes the in-app inbox, read state, unread filtering, and optional channel defaults.
 
-## 14. Notification Operations
+Required service/payment/security notices are not disabled by ordinary preferences. SMS remains opt-in by default for optional notices; in-app/email optional notices default enabled unless overridden.
 
-Admin operations can query notifications by channel/status and manually requeue eligible failed/queued external notifications:
+Admin operations:
 
 ```text
 GET  /api/v1/admin/notifications
 POST /api/v1/admin/notifications/:notificationId/retry
 ```
 
-Retry actions are audited.
+Retry actions are audited. The retry write is now compare-and-set against the observed notification `updatedAt`, external channel, and retryable status. A concurrent admin/worker state change returns `NOTIFICATION_RETRY_STATE_CONFLICT` rather than producing duplicate retry audit evidence.
 
-In-app notifications are not provider-retryable because they are persisted directly by CartNest.
+## 9. Shared client and contract integration
 
-A concrete email/SMS provider is still an environment/provider-selection decision. The P10 source baseline therefore stops at the normalized provider adapter boundary rather than inventing credentials or provider-specific template IDs.
-
-## 15. Database Additions
-
-P10 introduces the multi-file Prisma source:
+New client modules:
 
 ```text
-packages/database/prisma/p10.prisma
+packages/api-client/src/admin.ts
+packages/api-client/src/notifications.ts
 ```
 
-with:
+The browser instances are created in `apps/web/lib/api.ts`, preserving credentials and centralized CSRF handling.
 
-- `NotificationReceipt`;
-- `NotificationPreference`.
+The P10 contract module was also corrected to export the admin user/order/payment/refund summary and list DTO aliases required by a strict typed client. Query serialization was hardened for strict DTO object types under `exactOptionalPropertyTypes`.
 
-Additional PostgreSQL migration source includes:
+## 10. Database additions
+
+P10 introduces `NotificationReceipt` and `NotificationPreference` through the multi-file Prisma source and reviewed SQL constraint source.
+
+The SQL requirements include:
 
 - NotificationReceipt → Notification FK;
 - NotificationReceipt → User FK;
 - NotificationPreference → User FK;
-- optimized in-app user notification index;
+- optimized user in-app notification-history index;
 - one-active-platform-tax-policy partial unique index.
 
-These are migration source requirements. They are not a claim that a production database migration has already been executed.
+These remain migration source requirements, not a claim that the production/staging database migration has already executed.
 
-## 16. Contract and Route Tests Added
+## 11. Exit-gate assessment
 
-P10 source tests cover:
-
-- checkout promotion-code contract;
-- promotion DTO shape;
-- tax-rate bounds;
-- notification preference channel vocabulary;
-- P10 OpenAPI route registration;
-- unified admin order-operations route registration;
-- unavailable-auth boundary behavior.
-
-The exact test files include:
-
-```text
-packages/contracts/src/p10.test.ts
-apps/api/src/p10.routes.test.ts
-apps/api/src/app.test.ts
-```
-
-## 17. P10 Exit-Gate Assessment
-
-The approved P10 exit gate states:
+The approved P10 source-level exit gate is now represented end-to-end:
 
 > Admin tooling can explain the state of an order/payment/refund without direct database access, and privileged changes generate audit entries.
 
-At source level this is satisfied through:
+Source evidence includes:
 
 - `/api/v1/admin/orders/:orderId/operations`;
-- payment-attempt/allocation/refund/shipment/return aggregation;
-- admin tax/promotion audit entries;
-- admin notification-retry audit entries;
-- existing vendor/KYC/moderation/refund/review audit behavior from earlier phases.
+- payment/refund/shipment/return aggregation;
+- typed browser consumption in `/admin`;
+- tax/promotion audit entries;
+- notification retry audit entries;
+- privileged MFA boundaries;
+- existing vendor/KYC/refund/review audit behavior from earlier phases.
 
-Formal execution evidence is still unavailable because the repository's GitHub Actions workflow is failing during GitHub startup before any normal job is created.
+This is **source-level completion only**. Runtime evidence has not been established by this document.
 
-## 18. Remaining Non-Source Evidence / Deferred Work
+## 12. Remaining runtime/provider evidence
 
-The following remain intentionally outside the claim that P10 has runtime production evidence:
+Still required before P10 can be treated as production-certified:
 
-1. apply/review the actual Prisma/PostgreSQL migration containing P10 models and SQL constraints;
-2. regenerate OpenAPI and `@repo/api-client` after executable CI/local tooling is available;
-3. run lint/typecheck/tests/build in a trusted environment;
-4. select/configure concrete email and SMS providers before external delivery can occur;
-5. wire external notification dispatch into the BullMQ/outbox runtime and exercise retries/dead-letter handling;
-6. implement the P10 Next.js admin/vendor/customer UI during the agreed frontend/integration pass;
-7. exercise analytics/financial reconciliation against realistic seeded/staging data.
+1. execute lint/typecheck/tests/build in a trusted environment;
+2. apply/review the actual P10 Prisma/PostgreSQL migration and SQL constraints;
+3. regenerate/review OpenAPI and generated client artifacts;
+4. select/configure concrete email and SMS providers;
+5. wire external notification dispatch, retry, and dead-letter behavior into the BullMQ/outbox worker runtime;
+6. exercise platform/store analytics and financial reconciliation against realistic staging data;
+7. browser-test user notification preferences/read state and admin privileged-MFA behavior;
+8. exercise tax/promotion creation and promotion redemption under real PostgreSQL concurrency;
+9. validate unified admin order operations against realistic paid, refunded, returned, and fulfilled orders.
 
-Items 1–3 are currently blocked by the same execution-evidence problem recorded in P0–P9. Item 4 is deliberately provider-neutral by product/architecture design. Item 5 is part of the background-runtime integration/hardening work before production. Item 6 is intentionally deferred by the current backend-first development sequence.
+The repository's previously observed GitHub Actions workflow has failed during GitHub startup before normal jobs were created. The FP10 pull-request run must therefore be inspected directly; no lint/typecheck/test/build command is considered passed until an actual job executes.
 
-## 19. Current Phase Position
+## 13. Current phase position
 
 ```text
-P0  Repository/tooling foundation            implemented source baseline
-P1  Database + contracts                     implemented source baseline
-P2  Identity/auth/session/authorization       implemented source baseline
-P3  Vendor/store/KYC/membership               implemented source baseline
-P4  Catalog/variants/media                    implemented source baseline
-P5  Inventory/wishlist/cart                   implemented source baseline
-P6  Checkout/orders/reservations              implemented source baseline
-P7  Payments/commission/webhooks              implemented source baseline
-P8  Logistics/shipments                       implemented source baseline
-P9  Returns/refunds/reviews                   implemented source baseline
-P10 Admin/analytics/promotions/tax/notifs      implemented source baseline
+P0–P9   backend/domain source baselines + frontend integration through FP9
+P10     backend/domain + frontend/API-integration source baseline implemented
 
-NEXT: P11 Hardening / Performance / Security / NDPR
+NEXT: FP11 hardening / performance / security / privacy and NDPR integration
 ```
-
-P10 should not be treated as production-certified until its runtime/migration/provider evidence is completed in the later hardening/staging gates.
