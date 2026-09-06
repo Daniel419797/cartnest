@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24.20.0
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
       - run: pnpm security:scan
       - run: pnpm security:audit
       - run: pnpm lint
@@ -93,10 +93,10 @@ jobs:
           STAGING_USER: ${{ secrets.STAGING_USER }}
         run: |
           release_dir="/opt/cartnest/releases/${RELEASE_SHA}"
-          ssh "${STAGING_USER}@${STAGING_HOST}" "mkdir -p '${release_dir}'"
+          ssh "${STAGING_USER}@${STAGING_HOST}" "mkdir -p '${release_dir}' /opt/cartnest/state"
           scp deploy/staging/compose.release.yaml "${STAGING_USER}@${STAGING_HOST}:${release_dir}/compose.yaml"
           scp deploy/staging/Caddyfile "${STAGING_USER}@${STAGING_HOST}:${release_dir}/Caddyfile"
-      - name: Migrate and deploy staging
+      - name: Migrate and deploy staging candidate
         env:
           STAGING_HOST: ${{ secrets.STAGING_HOST }}
           STAGING_USER: ${{ secrets.STAGING_USER }}
@@ -108,12 +108,20 @@ jobs:
           env_file="/opt/cartnest/env/staging.env"
           test -f "$env_file"
           cd "$release_dir"
+          umask 077
+          cat > .release.env <<EOF
+          RELEASE_SHA=${RELEASE_SHA}
+          RELEASE_DIR=${release_dir}
+          WEB_IMAGE=${WEB_IMAGE}
+          API_IMAGE=${API_IMAGE}
+          WORKER_IMAGE=${WORKER_IMAGE}
+          EOF
+          ln -sfn "$release_dir" /opt/cartnest/candidate
           export STAGING_ENV_FILE="$env_file"
           export WEB_IMAGE API_IMAGE WORKER_IMAGE
           docker compose --env-file "$env_file" -f compose.yaml pull
           docker compose --env-file "$env_file" -f compose.yaml --profile migration run --rm migrate
           docker compose --env-file "$env_file" -f compose.yaml up -d --remove-orphans
-          ln -sfn "$release_dir" /opt/cartnest/current
           REMOTE
       - uses: pnpm/action-setup@v4
         with:
@@ -128,6 +136,20 @@ jobs:
           STAGING_API_URL: ${{ vars.STAGING_API_URL }}
           RELEASE_SHA: ${{ github.sha }}
         run: pnpm p12:smoke
+      - name: Promote smoke-passed staging release
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_USER }}
+        run: |
+          ssh "${STAGING_USER}@${STAGING_HOST}" \
+            "RELEASE_SHA='${RELEASE_SHA}' bash -s" <<'REMOTE'
+          set -euo pipefail
+          release_dir="/opt/cartnest/releases/${RELEASE_SHA}"
+          test -f "$release_dir/.release.env"
+          ln -sfn "$release_dir" /opt/cartnest/current
+          cp "$release_dir/.release.env" /opt/cartnest/state/last-good.env
+          rm -f /opt/cartnest/candidate
+          REMOTE
       - uses: actions/upload-artifact@v4
         if: always()
         with:

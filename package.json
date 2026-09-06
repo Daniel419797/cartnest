@@ -22,6 +22,7 @@
     "perf:benchmark": "node scripts/performance/http-benchmark.mjs",
     "p12:preflight": "node scripts/staging/preflight.mjs",
     "p12:smoke": "node scripts/staging/smoke.mjs",
+    "p12:gate": "node scripts/staging/verify-evidence.mjs",
     "staging:config": "docker compose -f deploy/staging/compose.yaml config",
     "staging:build": "docker compose -f deploy/staging/compose.yaml build",
     "staging:up": "docker compose -f deploy/staging/compose.yaml up -d",

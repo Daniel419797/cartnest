@@ -1,0 +1,100 @@
+name: Staging Application Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Previously deployed smoke-passed CartNest Git SHA to restore
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cartnest-staging
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 15
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate rollback target
+        run: |
+          if ! printf '%s' "$TARGET_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "target_sha must be a full 40-character lowercase Git SHA" >&2
+            exit 1
+          fi
+      - name: Configure staging SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Restore previous application images
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_USER }}
+        run: |
+          ssh "${STAGING_USER}@${STAGING_HOST}" \
+            "TARGET_SHA='${TARGET_SHA}' bash -s" <<'REMOTE'
+          set -euo pipefail
+          release_dir="/opt/cartnest/releases/${TARGET_SHA}"
+          env_file="/opt/cartnest/env/staging.env"
+          release_file="$release_dir/.release.env"
+          test -f "$env_file"
+          test -f "$release_file"
+          # shellcheck disable=SC1090
+          . "$release_file"
+          test "$RELEASE_SHA" = "$TARGET_SHA"
+          test "$RELEASE_DIR" = "$release_dir"
+          cd "$release_dir"
+          export STAGING_ENV_FILE="$env_file"
+          export WEB_IMAGE API_IMAGE WORKER_IMAGE
+          ln -sfn "$release_dir" /opt/cartnest/candidate
+          docker compose --env-file "$env_file" -f compose.yaml pull
+          docker compose --env-file "$env_file" -f compose.yaml up -d --remove-orphans
+          REMOTE
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.20.0
+      - name: Verify rollback target
+        env:
+          STAGING_WEB_URL: ${{ vars.STAGING_WEB_URL }}
+          STAGING_API_URL: ${{ vars.STAGING_API_URL }}
+          RELEASE_SHA: ${{ inputs.target_sha }}
+          P12_EVIDENCE_DIR: artifacts/p12/rollback
+        run: pnpm p12:smoke
+      - name: Promote verified rollback target
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_USER }}
+        run: |
+          ssh "${STAGING_USER}@${STAGING_HOST}" \
+            "TARGET_SHA='${TARGET_SHA}' bash -s" <<'REMOTE'
+          set -euo pipefail
+          release_dir="/opt/cartnest/releases/${TARGET_SHA}"
+          test -f "$release_dir/.release.env"
+          ln -sfn "$release_dir" /opt/cartnest/current
+          cp "$release_dir/.release.env" /opt/cartnest/state/last-good.env
+          rm -f /opt/cartnest/candidate
+          REMOTE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p12-staging-rollback-${{ inputs.target_sha }}
+          path: artifacts/p12/rollback
+          if-no-files-found: warn

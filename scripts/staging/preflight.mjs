@@ -1,4 +1,4 @@
-import { access, readdir } from "node:fs/promises";
+import { access, mkdir, readdir, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
@@ -18,12 +18,18 @@ async function fileExists(path) {
 }
 
 const requiredFiles = [
+  ".github/workflows/staging.yml",
+  ".github/workflows/staging-rollback.yml",
   "deploy/staging/compose.yaml",
+  "deploy/staging/compose.release.yaml",
   "deploy/staging/Caddyfile",
   "deploy/staging/staging.env.example",
+  "deploy/staging/p12-gate.example.json",
   "deploy/docker/Dockerfile.web",
   "deploy/docker/Dockerfile.api",
   "deploy/docker/Dockerfile.worker",
+  "scripts/staging/smoke.mjs",
+  "scripts/staging/verify-evidence.mjs",
 ];
 for (const path of requiredFiles) {
   record(`file:${path}`, await fileExists(resolve(path)), "required staging source artifact");
@@ -39,7 +45,7 @@ for (const command of ["docker", "node", "pnpm", "pg_dump", "pg_restore"]) {
 }
 
 const migrationsRoot = resolve("packages/database/prisma/migrations");
-let migrationSqlFiles = [];
+const migrationSqlFiles = [];
 try {
   const entries = await readdir(migrationsRoot, { withFileTypes: true });
   for (const entry of entries) {
@@ -77,11 +83,19 @@ record(
 );
 
 const result = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   exercise: "p12-staging-preflight",
   recordedAt: new Date().toISOString(),
+  releaseSha: process.env.RELEASE_SHA ?? process.env.GITHUB_SHA ?? "unknown",
   passed: checks.every((check) => check.passed),
   checks,
 };
+
+const evidenceDir = resolve(process.env.P12_EVIDENCE_DIR ?? "artifacts/p12");
+await mkdir(evidenceDir, { recursive: true });
+const evidenceFile = resolve(evidenceDir, `preflight-${Date.now()}.json`);
+await writeFile(evidenceFile, `${JSON.stringify(result, null, 2)}\n`, "utf8");
+
 console.log(JSON.stringify(result, null, 2));
+console.log(`P12 preflight evidence written to ${evidenceFile}`);
 if (!result.passed) process.exitCode = 1;

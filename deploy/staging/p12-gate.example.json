@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "releaseSha": "replace-with-exact-git-sha",
+  "blockers": [
+    "Replace this example with the real staging evidence manifest before sign-off."
+  ],
+  "exercises": [
+    { "id": "ci-deploy", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "clean-migration", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "upgrade-migration", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "rollback", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "backup-restore", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "reservation-expiry", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "paystack-lifecycle", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "flutterwave-lifecycle", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "gigl-sandbox", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "r2-lifecycle", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "admin-mfa-recovery", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "provider-outage", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "worker-dead-letter", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "load-test", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "buyer-uat", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "vendor-uat", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "admin-uat", "status": "NOT_RUN", "evidenceRefs": [] },
+    { "id": "security-privacy", "status": "NOT_RUN", "evidenceRefs": [] }
+  ],
+  "decision": {
+    "exitGate": "FAIL",
+    "eligibleForP13": false,
+    "approvedBy": [],
+    "approvedAt": null
+  }
+}
