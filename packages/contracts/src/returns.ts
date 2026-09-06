@@ -44,6 +44,12 @@ export const ReviewStatusSchema = Type.Union([
 ]);
 export type ReviewStatusDto = Static<typeof ReviewStatusSchema>;
 
+export const ReviewTargetTypeSchema = Type.Union([
+  Type.Literal("PRODUCT"),
+  Type.Literal("STORE"),
+]);
+export type ReviewTargetTypeDto = Static<typeof ReviewTargetTypeSchema>;
+
 export const CreateReturnBodySchema = Type.Object(
   {
     vendorOrderId: UuidSchema,
@@ -133,6 +139,7 @@ export type ReturnListResponseDto = Static<typeof ReturnListResponseSchema>;
 export const ReturnListQuerySchema = Type.Object(
   {
     status: Type.Optional(ReturnStatusSchema),
+    vendorOrderId: Type.Optional(UuidSchema),
     page: Type.Optional(Type.Integer({ minimum: 1, default: 1 })),
     pageSize: Type.Optional(Type.Integer({ minimum: 1, maximum: 100, default: 20 })),
   },
@@ -163,6 +170,16 @@ export const RefundListResponseSchema = Type.Object(
 );
 export type RefundListResponseDto = Static<typeof RefundListResponseSchema>;
 
+export const RefundListQuerySchema = Type.Object(
+  {
+    status: Type.Optional(RefundStatusSchema),
+    page: Type.Optional(Type.Integer({ minimum: 1, default: 1 })),
+    pageSize: Type.Optional(Type.Integer({ minimum: 1, maximum: 100, default: 20 })),
+  },
+  { additionalProperties: false },
+);
+export type RefundListQueryDto = Static<typeof RefundListQuerySchema>;
+
 export const CreateProductReviewBodySchema = Type.Object(
   {
     orderItemId: UuidSchema,
@@ -186,7 +203,7 @@ export type CreateStoreReviewBodyDto = Static<typeof CreateStoreReviewBodySchema
 export const ReviewSchema = Type.Object(
   {
     id: UuidSchema,
-    targetType: Type.Union([Type.Literal("PRODUCT"), Type.Literal("STORE")]),
+    targetType: ReviewTargetTypeSchema,
     targetId: UuidSchema,
     rating: Type.Integer({ minimum: 1, maximum: 5 }),
     text: Type.Union([Type.String({ maxLength: 4000 }), Type.Null()]),
@@ -205,6 +222,17 @@ export const ReviewListResponseSchema = Type.Object(
 );
 export type ReviewListResponseDto = Static<typeof ReviewListResponseSchema>;
 
+export const AdminReviewListQuerySchema = Type.Object(
+  {
+    status: Type.Optional(ReviewStatusSchema),
+    targetType: Type.Optional(ReviewTargetTypeSchema),
+    page: Type.Optional(Type.Integer({ minimum: 1, default: 1 })),
+    pageSize: Type.Optional(Type.Integer({ minimum: 1, maximum: 100, default: 20 })),
+  },
+  { additionalProperties: false },
+);
+export type AdminReviewListQueryDto = Static<typeof AdminReviewListQuerySchema>;
+
 export const ReviewModerationBodySchema = Type.Object(
   {
     status: Type.Union([Type.Literal("APPROVED"), Type.Literal("REJECTED"), Type.Literal("REMOVED")]),
@@ -213,6 +241,12 @@ export const ReviewModerationBodySchema = Type.Object(
   { additionalProperties: false },
 );
 export type ReviewModerationBodyDto = Static<typeof ReviewModerationBodySchema>;
+
+export const RestockReturnResponseSchema = Type.Object(
+  { adjustedItems: Type.Integer({ minimum: 0 }) },
+  { additionalProperties: false },
+);
+export type RestockReturnResponseDto = Static<typeof RestockReturnResponseSchema>;
 
 export const ReturnIdParamsSchema = Type.Object({ returnRequestId: UuidSchema }, { additionalProperties: false });
 export const RefundIdParamsSchema = Type.Object({ refundId: UuidSchema }, { additionalProperties: false });

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ErrorState, LoadingState } from "../../components/page-state";
 import { useSession } from "../../components/session-provider";
 import { apiErrorMessage, cartApi, catalogApi, wishlistApi } from "../../lib/api";
+import { PublicReviews } from "../returns/public-reviews";
 import {
   bestVariantForOptionValue,
   formatMoney,
@@ -97,7 +98,7 @@ export function ProductDetailBrowser({ productId }: Readonly<{ productId: string
   const returnTo = `/products/${encodeURIComponent(productId)}`;
 
   return (
-    <main className="productDetailPage">
+    <main className="productDetailPage commerceStack">
       <div className="productBreadcrumbs">
         <Link href="/marketplace">Marketplace</Link>
         <span aria-hidden="true">/</span>
@@ -112,14 +113,7 @@ export function ProductDetailBrowser({ productId }: Readonly<{ productId: string
           {product.media.length > 1 ? (
             <div className="productThumbs" aria-label="Product images">
               {product.media.map((media, index) => (
-                <button
-                  key={media.id}
-                  type="button"
-                  className={index === activeImage ? "productThumb productThumbActive" : "productThumb"}
-                  aria-label={`View image ${index + 1}`}
-                  aria-pressed={index === activeImage}
-                  onClick={() => setActiveImage(index)}
-                >
+                <button key={media.id} type="button" className={index === activeImage ? "productThumb productThumbActive" : "productThumb"} aria-label={`View image ${index + 1}`} aria-pressed={index === activeImage} onClick={() => setActiveImage(index)}>
                   <img src={media.url} alt="" />
                 </button>
               ))}
@@ -128,10 +122,7 @@ export function ProductDetailBrowser({ productId }: Readonly<{ productId: string
         </div>
 
         <div className="productInfoPanel">
-          <div className="productInfoTopline">
-            <span className="statusPill">{product.category?.name ?? "Uncategorized"}</span>
-            <span>{product.store.vendorDisplayName}</span>
-          </div>
+          <div className="productInfoTopline"><span className="statusPill">{product.category?.name ?? "Uncategorized"}</span><span>{product.store.vendorDisplayName}</span></div>
           <h1 className="pageTitle">{product.name}</h1>
           <p className="productStoreLine">Sold by <strong>{product.store.name}</strong></p>
           <div className="productPrice">{selectedVariant ? formatMoney(selectedVariant.price) : formatMoney(product.priceFrom)}</div>
@@ -145,29 +136,8 @@ export function ProductDetailBrowser({ productId }: Readonly<{ productId: string
                   <div className="optionValueRow">
                     {option.values.map((value) => {
                       const active = selected[option.id] === value.id;
-                      const compatibleVariant = bestVariantForOptionValue(
-                        product.variants,
-                        option.id,
-                        value.id,
-                        selected,
-                      );
-                      return (
-                        <button
-                          key={value.id}
-                          type="button"
-                          className={active ? "optionValue optionValueActive" : "optionValue"}
-                          disabled={!compatibleVariant}
-                          aria-pressed={active}
-                          onClick={() => {
-                            if (compatibleVariant) {
-                              setSelected(variantSelection(compatibleVariant));
-                              setCommerceMessage(null);
-                            }
-                          }}
-                        >
-                          {value.value}
-                        </button>
-                      );
+                      const compatibleVariant = bestVariantForOptionValue(product.variants, option.id, value.id, selected);
+                      return <button key={value.id} type="button" className={active ? "optionValue optionValueActive" : "optionValue"} disabled={!compatibleVariant} aria-pressed={active} onClick={() => { if (compatibleVariant) { setSelected(variantSelection(compatibleVariant)); setCommerceMessage(null); } }}>{value.value}</button>;
                     })}
                   </div>
                 </fieldset>
@@ -176,13 +146,8 @@ export function ProductDetailBrowser({ productId }: Readonly<{ productId: string
           ) : null}
 
           {selectedVariant ? (
-            <div className="variantSummary">
-              <div><span>SKU</span><strong>{selectedVariant.sku}</strong></div>
-              <div><span>Variant</span><strong>{selectedVariant.optionValues.length > 0 ? selectedVariant.optionValues.map((item) => item.value).join(" / ") : "Standard"}</strong></div>
-            </div>
-          ) : (
-            <p className="formMessage formMessageError" role="status">This option combination is not currently available. Choose another value.</p>
-          )}
+            <div className="variantSummary"><div><span>SKU</span><strong>{selectedVariant.sku}</strong></div><div><span>Variant</span><strong>{selectedVariant.optionValues.length > 0 ? selectedVariant.optionValues.map((item) => item.value).join(" / ") : "Standard"}</strong></div></div>
+          ) : <p className="formMessage formMessageError" role="status">This option combination is not currently available. Choose another value.</p>}
 
           <div className="productCommerceActions">
             {sessionStatus === "authenticated" && session ? (
@@ -194,27 +159,18 @@ export function ProductDetailBrowser({ productId }: Readonly<{ productId: string
                 </div>
                 {commerceMessage ? <p className="formMessage" role="status">{commerceMessage}</p> : null}
               </>
-            ) : sessionStatus === "loading" ? (
-              <p className="formMessage">Checking your account before enabling cart and wishlist actions…</p>
-            ) : sessionStatus === "unauthenticated" ? (
-              <div className="actionRow">
-                <Link className="primaryButton" href={`/login?returnTo=${encodeURIComponent(returnTo)}`}>Sign in to add to cart</Link>
-                <Link className="secondaryButton" href={`/login?returnTo=${encodeURIComponent(returnTo)}`}>Sign in to save</Link>
-              </div>
+            ) : sessionStatus === "loading" ? <p className="formMessage">Checking your account before enabling cart and wishlist actions…</p> : sessionStatus === "unauthenticated" ? (
+              <div className="actionRow"><Link className="primaryButton" href={`/login?returnTo=${encodeURIComponent(returnTo)}`}>Sign in to add to cart</Link><Link className="secondaryButton" href={`/login?returnTo=${encodeURIComponent(returnTo)}`}>Sign in to save</Link></div>
             ) : (
-              <div className="actionRow">
-                <p className="formMessage formMessageError">CartNest could not verify your session, so cart and wishlist mutations are disabled until the session check succeeds.</p>
-                <button className="secondaryButton" type="button" onClick={() => void reloadSession()}>Retry session check</button>
-              </div>
+              <div className="actionRow"><p className="formMessage formMessageError">CartNest could not verify your session, so cart and wishlist mutations are disabled until the session check succeeds.</p><button className="secondaryButton" type="button" onClick={() => void reloadSession()}>Retry session check</button></div>
             )}
           </div>
 
-          <div className="productPhaseNotice">
-            <strong>Secure marketplace listing</strong>
-            <span>CartNest only exposes products from active stores, approved vendors, accepted moderation states and active variants. Cart pricing and stock are revalidated by the backend.</span>
-          </div>
+          <div className="productPhaseNotice"><strong>Secure marketplace listing</strong><span>CartNest only exposes products from active stores, approved vendors, accepted moderation states and active variants. Cart pricing and stock are revalidated by the backend.</span></div>
         </div>
       </section>
+
+      <PublicReviews productId={product.id} storeId={product.store.id} />
     </main>
   );
 }

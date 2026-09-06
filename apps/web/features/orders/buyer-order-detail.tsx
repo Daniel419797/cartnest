@@ -7,6 +7,7 @@ import { ErrorState, LoadingState } from "../../components/page-state";
 import { apiErrorCode, apiErrorMessage, ordersApi } from "../../lib/api";
 import { formatMoney } from "../catalog/catalog-utils";
 import { BuyerShipmentTracking } from "../logistics/shipment-tracking";
+import { BuyerPostPurchase } from "../returns/buyer-post-purchase";
 import { isUnpaidOpenOrder, orderStatusClass, orderStatusLabel } from "./order-ui";
 
 function variantLabel(item: VendorOrderDto["items"][number]): string {
@@ -154,6 +155,7 @@ export function BuyerOrderDetail({ orderId }: Readonly<{ orderId: string }>) {
           </section>
 
           <BuyerShipmentTracking order={order} />
+          <BuyerPostPurchase order={order} />
         </div>
 
         <aside className="commerceSummary orderTotalPanel" aria-label="Order totals">

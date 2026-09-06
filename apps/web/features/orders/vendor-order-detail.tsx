@@ -7,6 +7,7 @@ import { ErrorState, LoadingState } from "../../components/page-state";
 import { apiErrorCode, apiErrorMessage, ordersApi } from "../../lib/api";
 import { formatMoney } from "../catalog/catalog-utils";
 import { VendorShipmentManager } from "../logistics/shipment-tracking";
+import { VendorRefunds } from "../returns/vendor-refunds";
 import { hasVendorPermission } from "../vendor/permissions";
 import { useVendorAccess } from "../vendor/use-vendor-access";
 import { VendorWorkspaceShell } from "../vendor/vendor-workspace-shell";
@@ -34,6 +35,7 @@ export function VendorOrderDetail({
   const canRead = access ? hasVendorPermission(access, "order:read") : false;
   const canProcess = access ? hasVendorPermission(access, "order:process") : false;
   const canFulfill = access ? hasVendorPermission(access, "order:fulfill") : false;
+  const canRequestRefund = access ? hasVendorPermission(access, "refund:request") : false;
 
   const load = useCallback(async () => {
     if (!access || !canRead || !vendorOrderId) return;
@@ -153,6 +155,7 @@ export function VendorOrderDetail({
             </div>
 
             <VendorShipmentManager order={order} canFulfill={canFulfill} onOrderChanged={load} />
+            <VendorRefunds order={order} canRequest={canRequestRefund} />
           </div>
         ) : null}
       </VendorWorkspaceShell>
