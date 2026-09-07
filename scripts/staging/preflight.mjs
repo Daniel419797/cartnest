@@ -18,6 +18,7 @@ async function fileExists(path) {
 }
 
 const requiredFiles = [
+  "pnpm-lock.yaml",
   ".github/workflows/staging.yml",
   ".github/workflows/staging-rollback.yml",
   "deploy/staging/compose.yaml",
@@ -32,7 +33,14 @@ const requiredFiles = [
   "scripts/staging/verify-evidence.mjs",
 ];
 for (const path of requiredFiles) {
-  record(`file:${path}`, await fileExists(resolve(path)), "required staging source artifact");
+  const exists = await fileExists(resolve(path));
+  record(
+    `file:${path}`,
+    exists,
+    path === "pnpm-lock.yaml" && !exists
+      ? "pnpm-lock.yaml is required because CI and Docker use --frozen-lockfile"
+      : "required staging source artifact",
+  );
 }
 
 for (const command of ["docker", "node", "pnpm", "pg_dump", "pg_restore"]) {

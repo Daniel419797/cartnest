@@ -6,6 +6,7 @@ const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts", ".js", ".jsx",
 const SKIP_DIRS = new Set(["node_modules", ".next", "dist", "coverage", ".turbo", ".git"]);
 const rules = [
   { roots: ["apps/web"], forbidden: ["@repo/database", "apps/api", "../../apps/api", "../api"], reason: "The web app must use the typed API client and must never import persistence or API internals." },
+  { roots: ["apps/worker"], forbidden: ["apps/api", "apps/web", "../../apps/api", "../../apps/web", "../api", "../web"], reason: "The worker may depend on shared packages/infrastructure but must not import another application entry point or its private modules." },
   { roots: ["packages/contracts", "packages/api-client", "packages/ui"], forbidden: ["@repo/database", "apps/api", "apps/web", "apps/worker"], reason: "Shared transport/UI packages must stay independent from database and application internals." },
   { roots: ["packages/database"], forbidden: ["apps/web", "apps/api", "apps/worker"], reason: "The database package is infrastructure and must not depend on application entry points." },
 ];

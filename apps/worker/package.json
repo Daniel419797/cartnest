@@ -7,11 +7,14 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
+    "outbox:replay": "node dist/replay.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
-    "@repo/config": "workspace:*"
+    "@repo/config": "workspace:*",
+    "@repo/database": "workspace:*",
+    "bullmq": "6.3.4"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
