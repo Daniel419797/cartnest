@@ -26,6 +26,8 @@ export interface OutboxDispatchResult {
   readonly failed: number;
 }
 
+const DEAD_LETTER_AT = new Date("9999-12-31T23:59:59.999Z");
+
 function safeError(error: unknown): string {
   const message = error instanceof Error ? error.message : "Unknown outbox dispatch failure.";
   return message.replaceAll(/(password|token|secret|authorization)=?[^\s,;]*/gi, "$1=[redacted]").slice(0, 1000);
@@ -69,47 +71,60 @@ export class OutboxDispatcher {
 
   private async claimBatch(): Promise<ClaimedOutboxEvent[]> {
     const staleBefore = new Date(Date.now() - this.options.lockTimeoutMs);
-    return this.database.$transaction(async (tx) => tx.$queryRaw<ClaimedOutboxEvent[]>(Prisma.sql`
-      WITH candidates AS (
-        SELECT "id"
-        FROM "OutboxEvent"
-        WHERE (
-            "status" IN ('PENDING'::"OutboxStatus", 'FAILED'::"OutboxStatus")
-            AND "attempts" < ${this.options.maxAttempts}
-            AND "availableAt" <= NOW()
-          )
-          OR (
-            "status" = 'PROCESSING'::"OutboxStatus"
-            AND "attempts" <= ${this.options.maxAttempts}
-            AND "lockedAt" IS NOT NULL
-            AND "lockedAt" < ${staleBefore}
-          )
-        ORDER BY "availableAt" ASC, "createdAt" ASC
-        FOR UPDATE SKIP LOCKED
-        LIMIT ${this.options.batchSize}
-      )
-      UPDATE "OutboxEvent" AS event
-      SET
-        "attempts" = CASE
-          WHEN event."status" = 'PROCESSING'::"OutboxStatus" THEN event."attempts"
-          ELSE event."attempts" + 1
-        END,
-        "status" = 'PROCESSING'::"OutboxStatus",
-        "lockedAt" = NOW(),
-        "lastError" = NULL
-      FROM candidates
-      WHERE event."id" = candidates."id"
-      RETURNING
-        event."id",
-        event."aggregateType",
-        event."aggregateId",
-        event."eventType",
-        event."eventVersion",
-        event."payload",
-        event."attempts",
-        event."lockedAt",
-        event."createdAt"
-    `));
+    return this.database.$transaction(async (tx) => {
+      await tx.outboxEvent.updateMany({
+        where: {
+          status: "PROCESSING",
+          attempts: { gte: this.options.maxAttempts },
+          lockedAt: { lt: staleBefore },
+        },
+        data: {
+          status: "FAILED",
+          lockedAt: null,
+          availableAt: DEAD_LETTER_AT,
+          lastError: "OUTBOX_LEASE_EXPIRED_AFTER_FINAL_ATTEMPT",
+        },
+      });
+
+      return tx.$queryRaw<ClaimedOutboxEvent[]>(Prisma.sql`
+        WITH candidates AS (
+          SELECT "id"
+          FROM "OutboxEvent"
+          WHERE (
+              "status" IN ('PENDING'::"OutboxStatus", 'FAILED'::"OutboxStatus")
+              AND "attempts" < ${this.options.maxAttempts}
+              AND "availableAt" <= NOW()
+            )
+            OR (
+              "status" = 'PROCESSING'::"OutboxStatus"
+              AND "attempts" < ${this.options.maxAttempts}
+              AND "lockedAt" IS NOT NULL
+              AND "lockedAt" < ${staleBefore}
+            )
+          ORDER BY "availableAt" ASC, "createdAt" ASC
+          FOR UPDATE SKIP LOCKED
+          LIMIT ${this.options.batchSize}
+        )
+        UPDATE "OutboxEvent" AS event
+        SET
+          "attempts" = event."attempts" + 1,
+          "status" = 'PROCESSING'::"OutboxStatus",
+          "lockedAt" = NOW(),
+          "lastError" = NULL
+        FROM candidates
+        WHERE event."id" = candidates."id"
+        RETURNING
+          event."id",
+          event."aggregateType",
+          event."aggregateId",
+          event."eventType",
+          event."eventVersion",
+          event."payload",
+          event."attempts",
+          event."lockedAt",
+          event."createdAt"
+      `);
+    });
   }
 
   private leaseWhere(event: ClaimedOutboxEvent) {
@@ -126,9 +141,7 @@ export class OutboxDispatcher {
       where: this.leaseWhere(event),
       data: { status: "PUBLISHED", lockedAt: null, publishedAt: new Date(), lastError: null },
     });
-    if (changed.count !== 1) {
-      throw new Error(`OUTBOX_PUBLISH_STATE_CONFLICT:${event.id}`);
-    }
+    if (changed.count !== 1) throw new Error(`OUTBOX_PUBLISH_STATE_CONFLICT:${event.id}`);
   }
 
   private async markRetryableFailure(event: ClaimedOutboxEvent, error: unknown): Promise<void> {
@@ -140,13 +153,11 @@ export class OutboxDispatcher {
         lockedAt: null,
         lastError: safeError(error),
         availableAt: exhausted
-          ? new Date("9999-12-31T23:59:59.999Z")
+          ? DEAD_LETTER_AT
           : new Date(Date.now() + retryDelayMs(event.attempts)),
       },
     });
-    if (changed.count !== 1) {
-      throw new Error(`OUTBOX_FAILURE_STATE_CONFLICT:${event.id}`);
-    }
+    if (changed.count !== 1) throw new Error(`OUTBOX_FAILURE_STATE_CONFLICT:${event.id}`);
   }
 
   private async markPermanentFailure(event: ClaimedOutboxEvent, reason: string): Promise<void> {
@@ -157,7 +168,7 @@ export class OutboxDispatcher {
         attempts: this.options.maxAttempts,
         lockedAt: null,
         lastError: reason.slice(0, 1000),
-        availableAt: new Date("9999-12-31T23:59:59.999Z"),
+        availableAt: DEAD_LETTER_AT,
       },
     });
     if (changed.count !== 1) {
@@ -177,8 +188,6 @@ export class OutboxDispatcher {
     const envelope = normalizedEnvelope(event);
     const subscriptions = queueSubscriptions(envelope.eventType);
     try {
-      // Domain facts may legitimately have no asynchronous subscriber yet.
-      // They are still a valid outbox event, so zero subscribers is not a dead letter.
       for (const queueKey of subscriptions) {
         await this.queues[queueKey].add(
           envelope.eventType,
@@ -189,17 +198,7 @@ export class OutboxDispatcher {
       await this.markPublished(event);
       return "published";
     } catch (error) {
-      try {
-        await this.markRetryableFailure(event, error);
-      } catch (stateError) {
-        if (
-          stateError instanceof Error &&
-          stateError.message.startsWith("OUTBOX_FAILURE_STATE_CONFLICT:")
-        ) {
-          throw stateError;
-        }
-        throw stateError;
-      }
+      await this.markRetryableFailure(event, error);
       return "failed";
     }
   }
