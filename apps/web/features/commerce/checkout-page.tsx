@@ -216,12 +216,19 @@ export function CheckoutPageContent() {
     <main className="commercePage checkoutPage">
       <div className="commerceHeader">
         <div className="commerceHeaderCopy">
-          <p className="eyebrow">Secure checkout</p>
+          <p className="eyebrow">Checkout</p>
           <h1 className="pageTitle">Delivery & order</h1>
-          <p className="muted">CartNest creates one parent order and a vendor order for each store. Prices, stock, promotions, tax and delivery are revalidated by the backend when the order is created.</p>
+          <p className="muted">Enter delivery details, calculate shipping, and create the order. CartNest revalidates price, stock, promotions, tax and delivery on the server.</p>
         </div>
         <Link className="secondaryButton" href="/cart">← Back to cart</Link>
       </div>
+
+      <nav className="commerceStepRail" aria-label="Checkout progress">
+        <span className="commerceStep commerceStepDone"><b>✓</b> Cart</span>
+        <span className="commerceStep commerceStepActive"><b>2</b> Delivery</span>
+        <span className="commerceStep"><b>3</b> Shipping</span>
+        <span className="commerceStep"><b>4</b> Payment</span>
+      </nav>
 
       {message ? <p className="formMessage formMessageError" role="alert">{message}</p> : null}
 
