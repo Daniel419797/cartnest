@@ -429,3 +429,17 @@
   .wishlistGrid { grid-template-columns: 1fr; }
   .accountNav { grid-template-columns: 1fr; }
 }
+
+/* Buyer returns and saved-account surfaces */
+.commercePage > .sellerForm,
+.commercePage > .panel {
+  box-shadow: none;
+  border-radius: var(--radius-md);
+}
+.commercePage > .sellerForm + .sellerForm { margin-top: 0.8rem; }
+.commercePage > .sellerForm .sectionHeadingCompact h2 { font-size: 1rem; }
+.commercePage > .sellerForm .orderItemRow { padding-inline: 0; }
+.commercePage > .sellerForm .orderMetadata {
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--line);
+}
