@@ -15,7 +15,7 @@ import { orderStatusLabel } from "../orders/order-ui";
 import { localDateToIso } from "./admin-utils";
 
 function Metric({ label, value }: Readonly<{ label: string; value: string | number }>) {
-  return <div className="panel compactPanel"><span className="commerceMeta">{label}</span><strong className="productPrice">{value}</strong></div>;
+  return <div className="adminMetric"><span className="commerceMeta">{label}</span><strong>{value}</strong></div>;
 }
 
 export function AdminOverview() {
