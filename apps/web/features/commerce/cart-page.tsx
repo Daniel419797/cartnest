@@ -165,12 +165,19 @@ export function CartPageContent() {
     <main className="commercePage">
       <div className="commerceHeader">
         <div className="commerceHeaderCopy">
-          <p className="eyebrow">Your basket</p>
-          <h1 className="pageTitle">Cart</h1>
-          <p className="muted">One CartNest cart can contain products from multiple stores. Checkout will split fulfillment by store while keeping one buyer flow.</p>
+          <p className="eyebrow">Shopping bag</p>
+          <h1 className="pageTitle">Your cart</h1>
+          <p className="muted">Review items from every store before moving into CartNest checkout.</p>
         </div>
         <Link className="secondaryButton" href="/marketplace">Continue shopping</Link>
       </div>
+
+      <nav className="commerceStepRail" aria-label="Checkout progress">
+        <span className="commerceStep commerceStepActive"><b>1</b> Cart</span>
+        <span className="commerceStep"><b>2</b> Delivery</span>
+        <span className="commerceStep"><b>3</b> Shipping</span>
+        <span className="commerceStep"><b>4</b> Payment</span>
+      </nav>
 
       {message ? <p className="formMessage formMessageError" role="alert">{message}</p> : null}
 
