@@ -262,3 +262,170 @@
   .productQuantity { width: 100%; }
   .inventoryAdjustmentForm { grid-template-columns: 1fr; }
 }
+
+
+
+/* CartNest commerce redesign — Phases 4–6 */
+.commerceStepRail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0 0 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+.commerceStep {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.9rem;
+  color: var(--text-soft);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+.commerceStep + .commerceStep { border-left: 1px solid var(--line); }
+.commerceStep b {
+  width: 1.45rem;
+  height: 1.45rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-soft);
+  font-size: 0.68rem;
+}
+.commerceStepActive {
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+}
+.commerceStepActive b,
+.commerceStepDone b {
+  background: var(--brand);
+  color: white;
+}
+.commerceStepDone { color: var(--brand-dark); }
+
+.storeGroup,
+.wishlistCard,
+.commerceSummary,
+.unavailableSection {
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+.storeGroupHeader {
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+}
+.storeGroupHeader > div {
+  display: grid;
+  gap: 0.15rem;
+}
+.storeGroupHeader h2 { font-size: 0.9rem; letter-spacing: -0.015em; }
+.storeGroupHeader span { font-size: 0.72rem; }
+.cartLine {
+  grid-template-columns: 6rem minmax(0, 1fr) minmax(9rem, auto);
+  padding: 1rem;
+}
+.cartLineImage { border-radius: 0.55rem; background: #f0f2ee; }
+.cartLineBody h3 { font-size: 0.88rem; }
+.cartLineActions strong { font-size: 0.96rem; }
+.quantityEditor input { width: 4.2rem; }
+.cartLineActions .textDangerButton { justify-self: end; font-size: 0.74rem; }
+
+.commerceSummary {
+  top: 7rem;
+  padding: 1rem;
+}
+.commerceSummary h2 { font-size: 0.9rem; }
+.summaryRow { font-size: 0.78rem; }
+.summaryTotal { font-size: 0.98rem; }
+.checkoutReadiness { font-size: 0.78rem; }
+
+.wishlistGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.9rem; }
+.wishlistCard { display: grid; }
+.wishlistImage { aspect-ratio: 1 / 1; background: #f0f2ee; }
+.wishlistBody { gap: 0.65rem; padding: 0.85rem; }
+.wishlistBody h2 { font-size: 0.9rem; }
+.wishlistFooter strong { font-size: 0.95rem; }
+.wishlistActions .primaryButton,
+.wishlistActions .secondaryButton { min-height: 2.35rem; }
+
+.accountLayout {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+.accountSidebar {
+  position: sticky;
+  top: 7rem;
+  display: grid;
+  gap: 0.8rem;
+}
+.accountIdentity {
+  display: grid;
+  grid-template-columns: 2.35rem 1fr;
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.accountIdentity > div { display: grid; gap: 0.12rem; }
+.accountIdentity strong { font-size: 0.78rem; }
+.accountIdentity span { color: var(--text-soft); font-size: 0.66rem; }
+.accountAvatar {
+  width: 2.35rem;
+  height: 2.35rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.6rem;
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  font-weight: 900;
+  font-size: 0.7rem;
+}
+.accountNav { display: grid; gap: 0.2rem; }
+.accountNavLink {
+  min-height: 2.45rem;
+  display: flex;
+  align-items: center;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.55rem;
+  color: #4b564f;
+  text-decoration: none;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.accountNavLink:hover,
+.accountNavLinkActive {
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+.accountContent { min-width: 0; display: grid; gap: 1rem; }
+.accountContent > .panel { border-radius: var(--radius-md); box-shadow: none; }
+
+@media (max-width: 980px) {
+  .wishlistGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .accountLayout { grid-template-columns: 1fr; }
+  .accountSidebar { position: static; }
+  .accountNav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .commerceStepRail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .commerceStep { min-height: 2.65rem; }
+  .commerceStep:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
+  .commerceStep:nth-child(4) { border-top: 1px solid var(--line); }
+  .cartLine { grid-template-columns: 4.75rem minmax(0, 1fr); }
+  .cartLineActions { grid-column: 1 / -1; }
+  .wishlistGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .accountNav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 440px) {
+  .wishlistGrid { grid-template-columns: 1fr; }
+  .accountNav { grid-template-columns: 1fr; }
+}
