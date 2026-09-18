@@ -25,6 +25,15 @@ function paymentAttemptActive(order: OrderDto): boolean {
   return ["REQUIRES_ACTION", "PROCESSING"].includes(order.paymentIntent.status);
 }
 
+function orderProgressIndex(status: string): number {
+  if (status === "PENDING_PAYMENT") return 0;
+  if (status === "PAID") return 1;
+  if (status === "PARTIALLY_FULFILLED") return 2;
+  if (status === "FULFILLED") return 3;
+  if (status === "PARTIALLY_CANCELLED" || status === "CANCELLED" || status === "PARTIALLY_REFUNDED" || status === "REFUNDED") return 2;
+  return 0;
+}
+
 export function BuyerOrderDetail({ orderId }: Readonly<{ orderId: string }>) {
   const [order, setOrder] = useState<OrderDto | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
@@ -103,6 +112,27 @@ export function BuyerOrderDetail({ orderId }: Readonly<{ orderId: string }>) {
       </div>
 
       {message ? <p className={message.startsWith("The unpaid") ? "formMessage formMessageSuccess" : "formMessage formMessageError"} role="status">{message}</p> : null}
+
+      <section className="panel orderProgressPanel" aria-label="Order progress">
+        <div className="sectionHeadingCompact">
+          <div><p className="eyebrow">Fulfillment</p><h2>Order progress</h2></div>
+          <span className={orderStatusClass(order.status)}>{orderStatusLabel(order.status)}</span>
+        </div>
+        <div className="orderProgressRail">
+          {["Payment", "Confirmed", "Preparing", "Delivered"].map((label, index) => (
+            <div className={
+              index <= orderProgressIndex(order.status)
+                ? "orderProgressStep orderProgressStepDone"
+                : index === orderProgressIndex(order.status) + 1
+                  ? "orderProgressStep orderProgressStepCurrent"
+                  : "orderProgressStep"
+            } key={label}>
+              <b>{index <= orderProgressIndex(order.status) ? "✓" : index + 1}</b>
+              <span>{label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div className="orderDetailLayout">
         <div className="commerceStack">
