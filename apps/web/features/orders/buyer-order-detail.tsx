@@ -26,12 +26,12 @@ function paymentAttemptActive(order: OrderDto): boolean {
 }
 
 function orderProgressIndex(status: string): number {
-  if (status === "PENDING_PAYMENT") return 0;
-  if (status === "PAID") return 1;
+  if (status === "PENDING_PAYMENT") return -1;
+  if (status === "PAID") return 0;
   if (status === "PARTIALLY_FULFILLED") return 2;
   if (status === "FULFILLED") return 3;
-  if (status === "PARTIALLY_CANCELLED" || status === "CANCELLED" || status === "PARTIALLY_REFUNDED" || status === "REFUNDED") return 2;
-  return 0;
+  if (status === "PARTIALLY_CANCELLED" || status === "CANCELLED" || status === "PARTIALLY_REFUNDED" || status === "REFUNDED") return 1;
+  return -1;
 }
 
 export function BuyerOrderDetail({ orderId }: Readonly<{ orderId: string }>) {
