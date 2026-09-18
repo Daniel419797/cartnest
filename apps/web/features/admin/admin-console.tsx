@@ -24,20 +24,39 @@ export function AdminConsole() {
   if (!mfaSatisfied) return <ErrorState title="Privileged MFA required" message="Administrative operations, financial diagnostics, and privacy decisions require a currently MFA-satisfied admin session." action={<Link className="primaryButton" href="/mfa">Complete MFA</Link>} />;
 
   return (
-    <main className="commercePage commerceStack">
-      <div className="commerceHeader"><div className="commerceHeaderCopy"><p className="eyebrow">Marketplace administration</p><h1 className="pageTitle">Operations & governance console</h1><p>Analytics, commercial policy, order-state diagnostics, notifications, and privacy review share the same privileged server boundary.</p></div><Link className="secondaryButton" href="/admin/p9">Returns/refunds/reviews</Link></div>
-      <nav className="actionRow" aria-label="Admin console sections">
-        <button className={section === "overview" ? "primaryButton" : "secondaryButton"} type="button" onClick={() => setSection("overview")}>Overview</button>
-        <button className={section === "orders" ? "primaryButton" : "secondaryButton"} type="button" onClick={() => setSection("orders")}>Order operations</button>
-        <button className={section === "commercial" ? "primaryButton" : "secondaryButton"} type="button" onClick={() => setSection("commercial")}>Tax & promotions</button>
-        <button className={section === "notifications" ? "primaryButton" : "secondaryButton"} type="button" onClick={() => setSection("notifications")}>Notifications</button>
-        <button className={section === "privacy" ? "primaryButton" : "secondaryButton"} type="button" onClick={() => setSection("privacy")}>Privacy</button>
-      </nav>
-      {section === "overview" ? <AdminOverview /> : null}
-      {section === "orders" ? <AdminOrderOperations /> : null}
-      {section === "commercial" ? <AdminCommercialPolicy /> : null}
-      {section === "notifications" ? <AdminNotificationOperations /> : null}
-      {section === "privacy" ? <AdminPrivacyOperations /> : null}
+    <main className="adminConsole">
+      <aside className="adminSidebar" aria-label="Admin operations navigation">
+        <div className="adminIdentity">
+          <span className="adminMark" aria-hidden="true">CN</span>
+          <div><strong>CartNest Admin</strong><span>{session.user.platformRole}</span></div>
+        </div>
+        <nav className="adminNav">
+          <button className={section === "overview" ? "adminNavButton adminNavButtonActive" : "adminNavButton"} type="button" onClick={() => setSection("overview")}>Overview</button>
+          <button className={section === "orders" ? "adminNavButton adminNavButtonActive" : "adminNavButton"} type="button" onClick={() => setSection("orders")}>Order operations</button>
+          <button className={section === "commercial" ? "adminNavButton adminNavButtonActive" : "adminNavButton"} type="button" onClick={() => setSection("commercial")}>Tax & promotions</button>
+          <button className={section === "notifications" ? "adminNavButton adminNavButtonActive" : "adminNavButton"} type="button" onClick={() => setSection("notifications")}>Notifications</button>
+          <button className={section === "privacy" ? "adminNavButton adminNavButtonActive" : "adminNavButton"} type="button" onClick={() => setSection("privacy")}>Privacy</button>
+        </nav>
+        <Link className="adminExternalLink" href="/admin/p9">Returns / refunds / reviews →</Link>
+        <Link className="adminExternalLink" href="/marketplace">Open storefront →</Link>
+      </aside>
+
+      <section className="adminMain">
+        <header className="adminHeader">
+          <div>
+            <p className="eyebrow">Marketplace administration</p>
+            <h1 className="pageTitle">Operations & governance</h1>
+            <p className="muted">Operational analytics, order diagnostics, commercial policy, notifications and privacy review.</p>
+          </div>
+          <span className="statusPill statusPillGood">MFA verified</span>
+        </header>
+
+        {section === "overview" ? <AdminOverview /> : null}
+        {section === "orders" ? <AdminOrderOperations /> : null}
+        {section === "commercial" ? <AdminCommercialPolicy /> : null}
+        {section === "notifications" ? <AdminNotificationOperations /> : null}
+        {section === "privacy" ? <AdminPrivacyOperations /> : null}
+      </section>
     </main>
   );
 }
