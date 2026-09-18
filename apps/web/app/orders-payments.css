@@ -311,3 +311,16 @@
     flex: 1 1 100%;
   }
 }
+
+
+
+/* Payment and order operations surface refinement */
+.orderSummaryCard,
+.vendorOrderQueueCard { border-radius: var(--radius-md); }
+.paymentMainPanel,
+.paymentCallbackPanel { border-radius: var(--radius-md); box-shadow: none; }
+.paymentSafetyPanel,
+.orderTotalPanel,
+.vendorOrderFinancials { border-radius: var(--radius-md); box-shadow: none; }
+.paymentOutcome,
+.paymentReconcileBox { border-radius: var(--radius-md); }
