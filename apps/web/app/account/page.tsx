@@ -64,9 +64,25 @@ export default function AccountPage() {
   return (
     <main className="pageShell">
       <AuthGuard>
-        <div className="commerceStack">
-          <AccountPanel />
-          <PrivacyCenter />
+        <div className="accountLayout">
+          <aside className="accountSidebar" aria-label="Account navigation">
+            <div className="accountIdentity">
+              <span className="accountAvatar" aria-hidden="true">CN</span>
+              <div><strong>My CartNest</strong><span>Account & security</span></div>
+            </div>
+            <nav className="accountNav">
+              <Link className="accountNavLink accountNavLinkActive" href="/account">Profile & security</Link>
+              <Link className="accountNavLink" href="/orders">Orders</Link>
+              <Link className="accountNavLink" href="/wishlist">Wishlist</Link>
+              <Link className="accountNavLink" href="/returns">Returns</Link>
+              <Link className="accountNavLink" href="/notifications">Notifications</Link>
+              <Link className="accountNavLink" href="/mfa">MFA</Link>
+            </nav>
+          </aside>
+          <div className="accountContent">
+            <AccountPanel />
+            <PrivacyCenter />
+          </div>
         </div>
       </AuthGuard>
     </main>
