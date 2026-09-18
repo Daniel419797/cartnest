@@ -35,6 +35,15 @@ export function BuyerOrdersPageContent() {
     setPage(1);
   }
 
+function orderProgressIndex(status: OrderStatusDto): number {
+  if (status === "PENDING_PAYMENT") return 0;
+  if (status === "PAID") return 1;
+  if (status === "PARTIALLY_FULFILLED") return 2;
+  if (status === "FULFILLED") return 3;
+  if (status === "PARTIALLY_CANCELLED" || status === "CANCELLED" || status === "PARTIALLY_REFUNDED" || status === "REFUNDED") return 2;
+  return 0;
+}
+
   return (
     <main className="commercePage ordersPage">
       <div className="commerceHeader">
@@ -75,6 +84,19 @@ export function BuyerOrdersPageContent() {
                       <span className={orderStatusClass(order.status)}>{orderStatusLabel(order.status)}</span>
                       <span className={orderStatusClass(order.paymentStatus)}>Payment: {orderStatusLabel(order.paymentStatus)}</span>
                     </div>
+                  </div>
+                  <div className="orderProgressMini" aria-label={`Order progress: ${orderStatusLabel(order.status)}`}>
+                    {["Payment", "Confirmed", "Preparing", "Delivered"].map((label, index) => (
+                      <span className={
+                        index <= orderProgressIndex(order.status)
+                          ? "orderProgressStep orderProgressStepDone"
+                          : index === orderProgressIndex(order.status) + 1
+                            ? "orderProgressStep orderProgressStepCurrent"
+                            : "orderProgressStep"
+                      } key={label}>
+                        <b>{index <= orderProgressIndex(order.status) ? "✓" : index + 1}</b>{label}
+                      </span>
+                    ))}
                   </div>
                   <div className="orderSummaryBottom">
                     <div><span className="commerceMeta">Placed</span><strong>{new Date(order.createdAt).toLocaleString()}</strong></div>
