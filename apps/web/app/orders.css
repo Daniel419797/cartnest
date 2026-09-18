@@ -200,3 +200,117 @@
   .orderItemRow { flex-direction: column; }
   .deliveryQuoteRow { align-items: flex-start; }
 }
+
+
+
+/* Checkout + post-purchase redesign — Phases 5–6 */
+.checkoutPage .commerceHeader { margin-bottom: 1rem; }
+.checkoutLayout { grid-template-columns: minmax(0, 1fr) minmax(19rem, 22rem); }
+.checkoutSection {
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  padding: 1.15rem;
+}
+.checkoutSection + .checkoutSection { margin-top: 0; }
+.checkoutSection .sectionHeadingCompact h2 { font-size: 1rem; }
+.checkoutSection .eyebrow { margin-bottom: 0.2rem; }
+.checkoutFieldGrid { gap: 0.7rem; }
+.checkoutSummary {
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+.deliveryQuoteList { border-radius: 0.55rem; }
+.deliveryQuoteRow { padding: 0.72rem 0.8rem; }
+.deliveryQuoteRow strong { font-size: 0.78rem; }
+
+.orderSummaryCard,
+.vendorOrderQueueCard {
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  padding: 0.95rem 1rem;
+}
+.orderSummaryCard:hover,
+.vendorOrderQueueCard:hover { box-shadow: 0 8px 22px rgba(20, 42, 27, 0.06); }
+.orderSummaryTop strong,
+.vendorOrderQueueTop strong { font-size: 0.82rem; }
+.orderSummaryBottom,
+.vendorOrderQueueBottom { padding-top: 0.7rem; }
+.orderOpenLabel { font-size: 0.74rem; }
+
+.orderProgressMini,
+.orderProgressRail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.25rem;
+}
+.orderProgressMini { padding-bottom: 0.15rem; }
+.orderProgressStep {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  color: var(--text-soft);
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+.orderProgressStep b {
+  flex: 0 0 auto;
+  width: 1.35rem;
+  height: 1.35rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: #768078;
+  font-size: 0.62rem;
+}
+.orderProgressStepDone { color: var(--brand-dark); }
+.orderProgressStepDone b { background: var(--brand); color: white; }
+.orderProgressStepCurrent { color: var(--text); }
+.orderProgressStepCurrent b {
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  box-shadow: inset 0 0 0 1px #b9d2bf;
+}
+.orderProgressPanel {
+  margin-bottom: 1rem;
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+.orderProgressRail { gap: 0; }
+.orderProgressRail .orderProgressStep {
+  min-height: 3.4rem;
+  padding: 0 0.8rem 0 0;
+}
+.orderProgressRail .orderProgressStep:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 1.45rem;
+  right: 0;
+  top: 0.68rem;
+  height: 1px;
+  background: var(--line);
+  transform: translateX(0.55rem);
+}
+.orderProgressRail .orderProgressStep b { position: relative; z-index: 1; }
+.orderProgressRail .orderProgressStepDone:not(:last-child)::after { background: #b9d2bf; }
+.orderProgressRail .orderProgressStep span { max-width: 6rem; }
+
+.orderInfoPanel {
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+.orderAddress { font-size: 0.82rem; }
+.orderVendorCard { border-radius: var(--radius-md); box-shadow: none; }
+.orderVendorCard .storeGroupHeader { background: var(--surface); }
+.vendorOrderTotals { background: var(--surface-muted); }
+.orderTotalPanel { border-radius: var(--radius-md); box-shadow: none; }
+.cancelOrderForm { gap: 0.65rem; }
+
+@media (max-width: 720px) {
+  .orderProgressMini,
+  .orderProgressRail { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; }
+  .orderProgressRail .orderProgressStep { min-height: 2.6rem; }
+  .orderProgressRail .orderProgressStep:not(:last-child)::after { display: none; }
+}
